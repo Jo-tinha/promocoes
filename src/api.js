@@ -21,7 +21,18 @@ const idLimpo = (id) => {
   }
 };
 
-export const linkDaPromocao = (dealID) => `${CHEAPSHARK}/redirect?dealID=${encodeURIComponent(idLimpo(dealID))}`;
+const LOJA_STEAM = '1';
+
+// Link de uma promoção:
+// - Steam: direto para a página do jogo (a CheapShark informa o ID do jogo na Steam);
+// - demais lojas: o link da CheapShark, que leva direto à página da oferta na loja
+//   (a API não informa o endereço da página do jogo nas outras lojas).
+export function linkDaPromocao(dealID, { lojaId, steamAppID } = {}) {
+  if (String(lojaId) === LOJA_STEAM && Number(steamAppID) > 0) {
+    return `https://store.steampowered.com/app/${Number(steamAppID)}/`;
+  }
+  return `${CHEAPSHARK}/redirect?dealID=${encodeURIComponent(idLimpo(dealID))}`;
+}
 
 function converter(p) {
   return {
@@ -39,7 +50,7 @@ function converter(p) {
     avaliacoes: Number(p.steamRatingCount) || 0,
     metacritic: Number(p.metacriticScore) || 0,
     lancamento: Number(p.releaseDate) ? new Date(Number(p.releaseDate) * 1000) : null,
-    link: linkDaPromocao(p.dealID),
+    link: linkDaPromocao(p.dealID, { lojaId: p.storeID, steamAppID: p.steamAppID }),
   };
 }
 
@@ -89,7 +100,7 @@ export async function buscarOfertasDosJogos(gameIDs) {
           precoNormal: normal,
           precoPromocional: preco,
           desconto: Math.round(Number(d.savings)),
-          link: linkDaPromocao(decodeURIComponent(d.dealID)),
+          link: linkDaPromocao(d.dealID, { lojaId: d.storeID, steamAppID: jogo.info.steamAppID }),
         });
       }
     }
@@ -111,7 +122,7 @@ export async function buscarOfertasDoJogo(gameID) {
       precoNormal: normal,
       precoPromocional: preco,
       desconto: Math.round(Number(d.savings)) || 0,
-      link: linkDaPromocao(dealID),
+      link: linkDaPromocao(dealID, { lojaId: d.storeID, steamAppID: dados.info?.steamAppID }),
     };
   });
   return {

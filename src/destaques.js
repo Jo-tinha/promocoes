@@ -54,7 +54,10 @@ export async function destacar(p, comentario = '') {
 export async function listarDestaques() {
   const snap = await getDocs(query(colDestaques, orderBy('criadoEm', 'desc')));
   // o link é refeito a partir do ID (destaques antigos podiam ter o ID codificado duas vezes)
-  return snap.docs.map((d) => ({ id: d.id, ...d.data(), link: linkDaPromocao(d.data().dealID) }));
+  return snap.docs.map((d) => {
+    const dados = d.data();
+    return { id: d.id, ...dados, link: linkDaPromocao(dados.dealID, { lojaId: dados.lojaId, steamAppID: dados.steamAppID }) };
+  });
 }
 
 // U — preço atual vindo da API, ou o comentário do admin
