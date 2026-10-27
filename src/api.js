@@ -137,6 +137,23 @@ async function buscarBrindesGamerPower() {
     }));
 }
 
+// Jogos por nome (com ou sem promoção agora) — usado nas sugestões da busca.
+// Retorna o menor preço atual entre as lojas. "sinal" permite cancelar buscas antigas.
+export async function buscarJogosPorNome(titulo, { limite = 8, sinal } = {}) {
+  const resp = await fetch(`${CHEAPSHARK}/api/1.0/games?title=${encodeURIComponent(titulo)}&limit=${limite}`, { signal: sinal });
+  if (!resp.ok) throw new Error(`Falha na busca (HTTP ${resp.status})`);
+  const lista = await resp.json();
+  return lista.map((j) => ({
+    gameID: j.gameID,
+    steamAppID: j.steamAppID || null,
+    titulo: j.external,
+    imagem: j.thumb,
+    menorPreco: Number(j.cheapest),
+    dealID: j.cheapestDealID ? decodeURIComponent(j.cheapestDealID) : null,
+    link: j.cheapestDealID ? linkDaPromocao(decodeURIComponent(j.cheapestDealID)) : null,
+  }));
+}
+
 // Lojas acompanhadas pela CheapShark (só as ativas)
 export async function buscarLojas() {
   const lojas = await getJson(`${CHEAPSHARK}/api/1.0/stores`);

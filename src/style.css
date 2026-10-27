@@ -633,3 +633,147 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
   .grade-jogos { gap: 8px; }
   .billboard h1 { font-size: 1.55rem; }
 }
+
+/* =====================================================================
+   BUSCA GLOBAL (cabeçalho)
+   ===================================================================== */
+.topo-linha { flex-wrap: nowrap; }
+.nav { flex: 0 0 auto; }
+.topo-busca { flex: 1 1 auto; display: flex; justify-content: flex-end; min-width: 0; }
+.busca { width: 100%; max-width: 520px; position: relative; }
+.busca-caixa { position: relative; display: flex; align-items: center; }
+.busca-campo {
+  width: 100%; padding: 10px 76px 10px 40px; border-radius: 12px; border: 1px solid var(--linha);
+  background: var(--fundo-2); font-size: 0.95rem; transition: border-color 0.15s, background 0.15s;
+}
+.busca-campo:focus { outline: none; border-color: var(--destaque); background: var(--cartao); box-shadow: 0 0 0 3px rgba(255, 92, 53, 0.18); }
+.busca-campo::-webkit-search-cancel-button { display: none; }
+.busca-icone { position: absolute; left: 12px; color: var(--texto-suave); display: flex; pointer-events: none; }
+.busca-limpar {
+  position: absolute; right: 38px; width: 26px; height: 26px; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--cartao-2); color: var(--texto); font-size: 1.05rem; line-height: 1;
+}
+.busca-atalho {
+  position: absolute; right: 10px; font: 600 0.72rem 'Inter', sans-serif; color: var(--texto-suave);
+  border: 1px solid var(--linha); border-radius: 6px; padding: 1px 6px; background: var(--fundo);
+}
+.busca-campo:focus ~ .busca-atalho { display: none; }
+.busca-carregando {
+  position: absolute; right: 70px; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--linha); border-top-color: var(--destaque); animation: girar 0.7s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+.busca-abrir, .busca-voltar { display: none; }
+
+.busca-painel {
+  position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 30; max-height: min(70vh, 520px); overflow-y: auto;
+  background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px; padding: 6px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6); animation: subir 0.15s ease both;
+}
+.busca-grupo { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px 4px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); }
+.busca-link { background: none; border: 0; color: var(--destaque-2); cursor: pointer; font-size: 0.78rem; text-transform: none; letter-spacing: 0; }
+.busca-opcao {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 10px; align-items: center;
+  padding: 7px 8px; border-radius: 10px; text-decoration: none; color: var(--texto); font-size: 0.9rem;
+}
+.busca-opcao[aria-selected='true'] { background: var(--cartao-2); }
+.busca-opcao img { width: 64px; height: 30px; object-fit: cover; border-radius: 5px; background: #000; }
+.busca-titulo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.busca-titulo mark { background: none; color: var(--destaque-2); font-weight: 700; }
+.busca-preco { font-size: 0.78rem; color: var(--texto-suave); white-space: nowrap; }
+.busca-preco strong { color: var(--verde); }
+.busca-opcao.recente { grid-template-columns: 24px minmax(0, 1fr) auto; }
+.busca-relogio { color: var(--texto-suave); text-align: center; }
+.busca-remover { background: none; border: 0; color: var(--texto-suave); cursor: pointer; font-size: 1.1rem; padding: 0 4px; }
+.busca-remover:hover { color: var(--texto); }
+.busca-todos { grid-template-columns: 24px minmax(0, 1fr) auto; border-top: 1px solid var(--linha); margin-top: 4px; border-radius: 0 0 10px 10px; color: var(--texto-suave); }
+.busca-todos svg { justify-self: center; }
+.busca-todos kbd { font-size: 0.7rem; border: 1px solid var(--linha); border-radius: 5px; padding: 1px 6px; }
+.busca-vazio { margin: 0; padding: 14px 10px; color: var(--texto-suave); font-size: 0.88rem; }
+
+/* Celular: lupa no cabeçalho; ao tocar, a busca ocupa a tela */
+@media (max-width: 640px) {
+  .topo-linha { flex-wrap: wrap; }
+  .topo-busca { flex: 0 0 auto; order: 2; margin-left: auto; }
+  .conta { order: 3; margin-left: 0; }
+  .nav { order: 4; flex-basis: 100%; }
+  .busca { max-width: none; width: auto; }
+  .busca-abrir {
+    display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px;
+    border: 1px solid var(--linha); background: var(--fundo-2); color: var(--texto); cursor: pointer;
+  }
+  .busca-caixa { display: none; }
+  .busca.aberta .busca-caixa {
+    display: flex; position: fixed; inset: 0 0 auto 0; z-index: 100; padding: 10px 12px; gap: 8px;
+    background: var(--fundo); border-bottom: 1px solid var(--linha);
+  }
+  .busca.aberta .busca-voltar {
+    display: grid; place-items: center; flex: 0 0 38px; height: 42px; border-radius: 10px; border: 0;
+    background: var(--cartao-2); color: var(--texto); font-size: 1.1rem; cursor: pointer;
+  }
+  .busca.aberta .busca-icone { left: 62px; }
+  .busca.aberta .busca-campo { padding-right: 44px; font-size: 1rem; height: 42px; }
+  .busca.aberta .busca-limpar { right: 20px; }
+  .busca.aberta .busca-carregando { right: 52px; }
+  .busca-atalho { display: none; }
+  .busca.aberta .busca-painel {
+    position: fixed; top: 63px; left: 0; right: 0; bottom: 0; max-height: none; border-radius: 0; border: 0;
+    border-top: 1px solid var(--linha); background: var(--fundo); box-shadow: none; padding: 8px 12px;
+  }
+  body.busca-aberta { overflow: hidden; }
+}
+
+/* =====================================================================
+   VITRINE — atalhos de lojas e faixa Grátis
+   ===================================================================== */
+.atalhos { display: flex; align-items: center; gap: 12px; margin: 18px 0 4px; }
+.atalhos-lojas { display: flex; gap: 8px; overflow-x: auto; flex: 1; min-width: 0; padding: 2px 2px 6px; scrollbar-width: none; }
+.atalhos-lojas::-webkit-scrollbar { display: none; }
+.atalhos-lojas .chip { text-decoration: none; color: var(--texto-suave); flex: 0 0 auto; }
+.atalhos-lojas .chip:hover { color: var(--texto); border-color: var(--cor-loja, var(--texto-suave)); background: color-mix(in srgb, var(--cor-loja, #fff) 12%, var(--cartao)); }
+.atalhos .cotacao { margin: 0; flex: 0 0 auto; }
+.chamada { margin-top: 14px; }
+.faixa-gratis .faixa-cabeca a { color: var(--texto); }
+.ponto-gratis { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ffd23f; margin-right: 8px; vertical-align: middle; box-shadow: 0 0 0 4px rgba(255, 210, 63, 0.18); }
+.faixa-gratis .jogo { --cor-loja: #ffd23f; }
+
+@media (max-width: 640px) {
+  .atalhos { flex-wrap: wrap; gap: 8px; }
+  .atalhos .cotacao { order: -1; }
+  .atalhos-lojas { flex-basis: 100%; }
+}
+
+/* =====================================================================
+   PÁGINA DE BUSCA
+   ===================================================================== */
+.pagina-busca { padding: 28px 0 40px; }
+.busca-cabeca h1 { font-size: clamp(1.6rem, 4vw, 2.3rem); margin: 0 0 6px; letter-spacing: -0.02em; }
+.busca-cabeca h1 span { color: var(--destaque); }
+.busca-cabeca { margin-bottom: 18px; }
+.filtros-busca {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding: 14px; margin-bottom: 18px;
+  background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px;
+}
+.filtros-busca label { display: grid; gap: 5px; font-size: 0.75rem; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.05em; }
+.filtros-busca select, .filtros-busca input[type='number'] {
+  padding: 9px 10px; border-radius: 9px; border: 1px solid var(--linha); background: var(--fundo-2); min-width: 140px; font-size: 0.9rem; text-transform: none; letter-spacing: 0;
+}
+.filtros-busca input[type='number'] { width: 130px; min-width: 0; }
+.filtros-busca .check-filtro { display: flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 0.9rem; color: var(--texto); padding-bottom: 9px; }
+.filtros-busca .check-filtro input { accent-color: var(--destaque); width: 18px; height: 18px; }
+.lista-outros { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.outro-jogo {
+  display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 8px; border-radius: 12px; background: var(--cartao); border: 1px solid var(--linha);
+}
+.outro-jogo img { width: 96px; height: 45px; object-fit: cover; border-radius: 6px; background: #000; }
+.outro-info { display: grid; gap: 2px; min-width: 0; }
+.outro-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.9rem; }
+.outro-info small { color: var(--texto-suave); font-size: 0.78rem; }
+@media (max-width: 640px) {
+  .filtros-busca { display: grid; grid-template-columns: 1fr 1fr; padding: 12px; gap: 10px; }
+  .filtros-busca select, .filtros-busca input[type='number'] { width: 100%; min-width: 0; font-size: 1rem; }
+  .filtros-busca .check-filtro { padding-bottom: 0; }
+}
+/* o desfoque do cabeçalho cria um "contêiner" para elementos fixos; desliga enquanto a busca está em tela cheia */
+body.busca-aberta .topo { backdrop-filter: none; background: var(--fundo); }

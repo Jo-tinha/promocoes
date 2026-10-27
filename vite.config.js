@@ -13,6 +13,7 @@ export default defineConfig({
         notificar: resolve(import.meta.dirname, 'notificar.html'),
         loja: resolve(import.meta.dirname, 'loja.html'),
         jogos: resolve(import.meta.dirname, 'jogos.html'),
+        busca: resolve(import.meta.dirname, 'busca.html'),
         privacidade: resolve(import.meta.dirname, 'privacidade.html'),
         termos: resolve(import.meta.dirname, 'termos.html'),
         naoEncontrada: resolve(import.meta.dirname, '404.html'),

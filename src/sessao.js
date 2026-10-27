@@ -6,6 +6,7 @@ import { carregarContexto, dolarParaReal, precoEmReal } from './contexto.js';
 import { notificarNovos, prepararNotificacoes } from './notificacoes.js';
 import { esc } from './util.js';
 import { iniciarSite } from './site.js';
+import { iniciarBusca } from './busca-global.js';
 
 const topo = document.querySelector('#topo');
 
@@ -30,12 +31,20 @@ function renderizarTopo(usuario, admin, pagina) {
       ? ''
       : '<a class="botao pequeno" href="/entrar.html">Entrar</a>';
 
-  topo.innerHTML = `
-    <div class="container topo-linha">
-      <a class="marca" href="/">Buba <span>Promo</span></a>
-      <nav class="nav" aria-label="Principal">${nav}</nav>
-      <div class="conta">${conta}</div>
-    </div>`;
+  // a estrutura é montada uma vez (a busca não pode ser recriada a cada mudança de login);
+  // depois só o menu e a área da conta são atualizados
+  if (!topo.querySelector('.topo-linha')) {
+    topo.innerHTML = `
+      <div class="container topo-linha">
+        <a class="marca" href="/">Buba <span>Promo</span></a>
+        <nav class="nav" aria-label="Principal"></nav>
+        <div class="topo-busca" id="topo-busca"></div>
+        <div class="conta"></div>
+      </div>`;
+    if (pagina !== 'entrar') iniciarBusca(topo.querySelector('#topo-busca'));
+  }
+  topo.querySelector('.nav').innerHTML = nav;
+  topo.querySelector('.conta').innerHTML = conta;
 
   document.querySelector('#sair')?.addEventListener('click', async () => {
     await signOut(auth);

@@ -24,43 +24,40 @@
         </div>
       </section>
 
-      <div class="container vitrine-layout">
-        <div class="principal">
-          <div class="barra-busca">
-            <input type="search" id="busca" placeholder="Buscar jogo em todas as lojas…" aria-label="Buscar jogo em todas as lojas" />
-            <span class="cotacao" id="cotacao" style="margin:0">Dólar: …</span>
-          </div>
-          <div class="chamada" id="chamada">
-            <a href="/entrar.html">Entre ou crie sua conta</a> para ver as recomendações do dia e receber avisos quando os seus jogos entrarem em promoção.
-          </div>
-
-          <section class="faixa" id="faixa-busca" hidden aria-labelledby="titulo-busca">
-            <div class="faixa-cabeca"><h2 id="titulo-busca">Resultados</h2><p id="nota-busca"></p></div>
-            <div class="trilho" id="trilho-busca"></div>
-          </section>
-
-          <section class="faixa faixa-destaques" id="faixa-destaques" aria-labelledby="titulo-destaques">
-            <div class="faixa-cabeca"><h2 id="titulo-destaques">Destaques</h2><p>Escolhidos a dedo pela equipe</p></div>
-            <div class="trilho" id="trilho-destaques"></div>
-          </section>
-
-          <section class="faixa" id="faixa-recomendacoes" hidden aria-labelledby="titulo-recs">
-            <div class="faixa-cabeca"><h2 id="titulo-recs">Recomendações do dia</h2><p id="nota-recs">Jogos, notícias e eventos</p></div>
-            <div class="trilho" id="trilho-recomendacoes"></div>
-          </section>
-
-          <div id="faixas-lojas"></div>
-          <div class="mais-lojas"><button class="botao secundario" type="button" id="mais-lojas" hidden>Mostrar mais lojas</button></div>
+      <div class="container">
+        <!-- Atalhos: cada loja abre a página dela; a cotação explica os preços em reais -->
+        <div class="atalhos">
+          <nav class="atalhos-lojas" id="atalhos-lojas" aria-label="Ir para uma loja"></nav>
+          <span class="cotacao" id="cotacao">Dólar: …</span>
         </div>
 
-        <aside class="coluna-gratis" aria-labelledby="titulo-gratis">
-          <h2 id="titulo-gratis"><span>●</span> Grátis agora</h2>
-          <p>Jogos de PC de graça por tempo limitado.</p>
-          <div class="lista-gratis" id="lista-gratis">
-            <div class="esqueleto" style="width:auto"></div>
+        <div class="chamada" id="chamada">
+          <a href="/entrar.html">Entre ou crie sua conta</a> para ver as recomendações do dia e estrelar jogos para ser avisado das promoções.
+        </div>
+
+        <section class="faixa faixa-destaques" id="faixa-destaques" aria-labelledby="titulo-destaques">
+          <div class="faixa-cabeca"><h2 id="titulo-destaques">Destaques</h2><p>Escolhidos a dedo pela equipe</p></div>
+          <button class="seta esq" type="button" aria-label="Rolar para a esquerda">‹</button><button class="seta dir" type="button" aria-label="Rolar para a direita">›</button>
+          <div class="trilho" id="trilho-destaques"></div>
+        </section>
+
+        <section class="faixa faixa-gratis" id="faixa-gratis" aria-labelledby="titulo-gratis">
+          <div class="faixa-cabeca">
+            <h2 id="titulo-gratis"><span class="ponto-gratis" aria-hidden="true"></span>Grátis agora</h2>
+            <p>Por tempo limitado · via <a href="https://www.gamerpower.com" target="_blank" rel="noopener">GamerPower.com</a> e CheapShark</p>
           </div>
-          <p class="credito">Brindes via <a href="https://www.gamerpower.com" target="_blank" rel="noopener">GamerPower.com</a> e CheapShark.</p>
-        </aside>
+          <button class="seta esq" type="button" aria-label="Rolar para a esquerda">‹</button><button class="seta dir" type="button" aria-label="Rolar para a direita">›</button>
+          <div class="trilho" id="lista-gratis"></div>
+        </section>
+
+        <section class="faixa" id="faixa-recomendacoes" hidden aria-labelledby="titulo-recs">
+          <div class="faixa-cabeca"><h2 id="titulo-recs">Recomendações do dia</h2><p id="nota-recs">Jogos, notícias e eventos</p></div>
+          <button class="seta esq" type="button" aria-label="Rolar para a esquerda">‹</button><button class="seta dir" type="button" aria-label="Rolar para a direita">›</button>
+          <div class="trilho" id="trilho-recomendacoes"></div>
+        </section>
+
+        <div id="faixas-lojas"></div>
+        <div class="mais-lojas"><button class="botao secundario" type="button" id="mais-lojas" hidden>Mostrar mais lojas</button></div>
       </div>
     </main>
 

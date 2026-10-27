@@ -20,7 +20,7 @@ let usuario = null;
 
 function cartao(j, i) {
   const visto = j.ultimaPromocaoEm ? j.ultimaPromocaoEm.toDate().toLocaleDateString('pt-BR') : '';
-  const busca = `/?q=${encodeURIComponent(j.titulo)}`;
+  const busca = `/busca.html?q=${encodeURIComponent(j.titulo)}`;
   return `
     <article class="jogo" data-deal="${esc(j.gameID)}" style="${varsDaLoja(j.lojaId)};--i:${Math.min(i, 20)}">
       <a class="jogo-capa" href="${busca}" tabindex="-1">

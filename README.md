@@ -25,6 +25,7 @@ Aplicação web de promoções de jogos de PC — Projeto integrador, Atividade 
 ```
 index.html                  Vitrine (pública) + recomendações do dia (logado)
 loja.html                   Todas as promoções de uma loja em grade de tela cheia ("Ver todas")
+busca.html                  Resultados da busca com filtros (loja, preço, desconto, grátis, ordem)
 jogos.html                  Games: catálogo de todos os jogos que já passaram em promoção, com estrela
 public/sw.js                Service worker para as notificações do navegador
 entrar.html                 Login, cadastro, Google e "esqueci minha senha"
@@ -39,6 +40,7 @@ src/catalogo.js             Coleção "jogos" (catálogo Games): salvar, listar 
 src/estrela.js              Estrelar jogos (seguir) em qualquer página
 src/notificacoes.js         Permissão e notificações do navegador
 src/cartoes.js              Cartão de jogo e peças visuais compartilhadas
+src/busca-global.js         Barra de busca do cabeçalho: sugestões, teclado, recentes, atalho "/"
 src/lojas.js                Cores de cada loja, ordem das faixas, capas grandes da Steam
 api/gratis.js               Função do Vercel que busca os jogos grátis da GamerPower
 src/recomendacoes.js        Coleção "recomendacoes"
@@ -88,3 +90,7 @@ Importe o repositório em <https://vercel.com/new>. O preset **Vite** é detecta
 - **Games** (`/jogos.html`): todo jogo que já apareceu em promoção fica salvo na coleção `jogos`. O catálogo cresce sozinho quando usuários logados navegam (cada jogo é gravado no máximo uma vez por dia por navegador) e o admin pode puxar ~600 de uma vez em **Painel › Destaques › Sincronizar catálogo Games**.
 - **Estrela ☆**: em qualquer cartão (vitrine, loja, Games). Estrelar grava em `usuarios/{uid}/seguindo` e, na primeira vez, o navegador pede permissão para notificações.
 - **Notificações**: com o site aberto em alguma aba, os jogos estrelados são conferidos ao abrir e a cada 15 minutos; promoções novas viram notificação do navegador (via `public/sw.js`, necessário no Android). Avisar com o navegador fechado exigiria um servidor de push (Firebase Cloud Messaging + back-end), fora do escopo.
+
+## Busca
+
+A barra fica no cabeçalho de todas as páginas: sugestões com capa e menor preço enquanto você digita (CheapShark `/games?title=`), trecho buscado em destaque, setas ↑ ↓ + Enter, Esc para fechar, botão de limpar, buscas recentes (só se o usuário permitir "Preferências" nos cookies) e atalho **/** para focar. No celular, a lupa abre a busca em tela cheia. Enter leva para `/busca.html?q=…`, com filtros de loja, preço máximo em R$, desconto mínimo, só grátis e ordenação — todos guardados no endereço, para o link poder ser compartilhado — e uma lista de jogos com o mesmo nome que não estão em promoção, para estrelar.

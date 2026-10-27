@@ -9,9 +9,12 @@ import { buscarPromocoes, buscarGratis } from './api.js';
 import { contexto, carregarContexto, nomeDaLoja } from './contexto.js';
 import { ORDEM_LOJAS, varsDaLoja, imgJogo } from './lojas.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
-import { guardarPreferencia, lerPreferencia } from './site.js';
 
 const $ = (s) => document.querySelector(s);
+
+// endereços antigos /?q=jogo agora abrem a página de busca
+const qAntigo = new URLSearchParams(location.search).get('q');
+if (qAntigo) location.replace(`/busca.html?q=${encodeURIComponent(qAntigo)}`);
 const elBillboard = $('#billboard');
 const elFaixasLojas = $('#faixas-lojas');
 const botaoMaisLojas = $('#mais-lojas');
@@ -176,28 +179,15 @@ async function carregarMaisLojas() {
 }
 
 async function carregarGratis() {
-  const lista = $('#lista-gratis');
+  const trilho = $('#lista-gratis');
+  trilho.innerHTML = esqueletos(4);
   try {
     const jogos = await buscarGratis();
-    lista.innerHTML = jogos.length
-      ? jogos.map((p, i) => cartaoJogo(p, { especial: true, i })).join('')
-      : '<div class="aviso">Nenhum jogo grátis no momento.</div>';
-    // no computador mostra 8 e um botão para expandir (sem rolagem dentro da coluna)
-    if (jogos.length > 8) {
-      lista.insertAdjacentHTML(
-        'afterend',
-        `<button class="botao secundario pequeno ver-todos-gratis" type="button">Ver todos os ${jogos.length} grátis</button>`,
-      );
-      const botao = lista.nextElementSibling;
-      botao.addEventListener('click', () => {
-        const coluna = lista.closest('.coluna-gratis');
-        coluna.classList.toggle('expandida');
-        botao.textContent = coluna.classList.contains('expandida') ? 'Mostrar menos' : `Ver todos os ${jogos.length} grátis`;
-      });
-    }
+    if (!jogos.length) return ($('#faixa-gratis').hidden = true);
+    trilho.innerHTML = jogos.map((p, i) => cartaoJogo(p, { especial: true, i })).join('');
   } catch (erro) {
     console.error(erro);
-    lista.innerHTML = '<div class="aviso erro">Não foi possível carregar os jogos grátis.</div>';
+    $('#faixa-gratis').hidden = true;
   }
 }
 
@@ -218,47 +208,16 @@ async function carregarRecomendacoes() {
   }
 }
 
-// ---------- Busca em todas as lojas ----------
-let espera;
-let buscaAtual = 0;
-$('#busca').addEventListener('input', (e) => {
-  clearTimeout(espera);
-  const termo = e.target.value.trim();
-  guardarPreferencia('busca', termo);
-  const faixa = $('#faixa-busca');
-  if (termo.length < 2) {
-    faixa.hidden = true;
-    return;
-  }
-  espera = setTimeout(async () => {
-    const id = ++buscaAtual;
-    faixa.hidden = false;
-    $('#trilho-busca').innerHTML = esqueletos(4);
-    try {
-      const lista = await buscarPromocoes({ termo, limite: 30 });
-      if (id !== buscaAtual) return;
-      $('#nota-busca').textContent = `${lista.length} ${lista.length === 1 ? 'promoção' : 'promoções'} para “${termo}”`;
-      $('#trilho-busca').innerHTML = lista.length
-        ? lista.map((p, i) => cartaoJogo(p, { especial: true, i })).join('')
-        : '<div class="aviso">Nenhum jogo em promoção com esse nome.</div>';
-    } catch (erro) {
-      console.error(erro);
-      $('#trilho-busca').innerHTML = '<div class="aviso erro">Não foi possível buscar agora.</div>';
-    }
-  }, 450);
-});
-
-// ---------- Coluna Grátis no celular ----------
-// No computador ela fica na lateral; em telas menores vai para logo depois dos Destaques
-const colunaGratis = document.querySelector('.coluna-gratis');
-const layout = document.querySelector('.vitrine-layout');
-const telaPequena = matchMedia('(max-width: 1080px)');
-function posicionarGratis() {
-  if (telaPequena.matches) $('#faixa-destaques').after(colunaGratis);
-  else layout.append(colunaGratis);
+// ---------- Atalhos das lojas ----------
+function renderizarAtalhos() {
+  $('#atalhos-lojas').innerHTML = ORDEM_LOJAS.filter((id) => contexto.lojas.has(id))
+    .slice(0, 10)
+    .map((id) => {
+      const l = contexto.lojas.get(id);
+      return `<a class="chip" href="/loja.html?id=${encodeURIComponent(id)}" style="${varsDaLoja(id)}"><img src="${esc(l.icone)}" alt="" />${esc(l.nome)}</a>`;
+    })
+    .join('') + '<a class="chip" href="#faixa-gratis">🎁 Grátis</a><a class="chip" href="/jogos.html">⭐ Games</a>';
 }
-posicionarGratis();
-telaPequena.addEventListener('change', posicionarGratis);
 
 // ---------- Interações ----------
 ativarSetas();
@@ -270,15 +229,8 @@ async function iniciar() {
   await carregarContexto();
   $('#cotacao').innerHTML = contexto.cotacao ? `Dólar: <strong>${formatarReal(contexto.cotacao)}</strong>` : 'Preços em dólar';
   estado.lojasPendentes = ORDEM_LOJAS.filter((id) => contexto.lojas.has(id));
+  renderizarAtalhos();
   carregarGratis();
-  // ?q= vem do botão "Ver ofertas atuais" da página Games; senão, usa a última busca salva (se permitido)
-  const pedida = new URLSearchParams(location.search).get('q');
-  const ultimaBusca = pedida || lerPreferencia('busca');
-  if (ultimaBusca) {
-    $('#busca').value = ultimaBusca;
-    $('#busca').dispatchEvent(new Event('input'));
-    if (pedida) setTimeout(() => $('#faixa-busca').scrollIntoView({ behavior: 'smooth', block: 'center' }), 700);
-  }
   await carregarDestaques();
   carregarMaisLojas();
 }
