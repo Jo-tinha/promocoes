@@ -174,11 +174,21 @@ async function carregarFaixaLoja(lojaId) {
   secao.className = 'faixa';
   secao.setAttribute('style', varsDaLoja(lojaId));
   secao.setAttribute('aria-label', nomeDaLoja(lojaId));
-  secao.innerHTML = `${setas}<div class="trilho">${esqueletos(4, true)}</div>`;
+  const loja = contexto.lojas.get(lojaId);
+  const linkTodas = `/loja.html?id=${encodeURIComponent(lojaId)}`;
+  // cabeçalho fixo acima da faixa: "Ver todas" fica sempre à mão, mesmo com a faixa rolada
+  secao.innerHTML = `
+    <div class="faixa-cabeca cabeca-loja-faixa">
+      <h2>${loja ? `<img src="${esc(loja.icone)}" alt="" />` : ''}${esc(nomeDaLoja(lojaId))}</h2>
+      <p class="contagem-faixa"></p>
+      <a class="ver-mais" href="${linkTodas}">Ver todas as promoções <span aria-hidden="true">→</span></a>
+    </div>
+    ${setas}<div class="trilho">${esqueletos(4, true)}</div>`;
   elFaixasLojas.append(secao);
   try {
     const lista = await buscarPromocoes({ lojaId, ordem: 'Deal Rating', limite: 20 });
     if (!lista.length) return secao.remove();
+    secao.querySelector('.contagem-faixa').textContent = `até -${Math.max(...lista.map((p) => p.desconto))}%`;
     secao.querySelector('.trilho').innerHTML =
       blocoLoja(lojaId, lista) +
       lista.map((p, i) => cartaoJogo(p, { i })).join('') +

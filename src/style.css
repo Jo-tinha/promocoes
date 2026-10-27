@@ -849,3 +849,24 @@ body.escolha-aberta { overflow: hidden; }
 }
 .escolha:focus, .escolha:focus-visible { outline: none; }
 .escolha-fechar:focus-visible, .escolha-linha:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }
+
+/* Cabeçalho de cada faixa de loja: nome + "Ver todas as promoções" sempre visível acima da faixa */
+.cabeca-loja-faixa { align-items: center; }
+.cabeca-loja-faixa h2 { display: flex; align-items: center; gap: 8px; }
+.cabeca-loja-faixa h2 img { width: 22px; height: 22px; border-radius: 6px; background: #000; }
+.cabeca-loja-faixa .contagem-faixa { color: var(--cor-loja); font-weight: 600; }
+.faixa-cabeca .ver-mais {
+  margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 700; text-decoration: none;
+  color: var(--cor-loja, var(--destaque-2)); border: 1px solid color-mix(in srgb, var(--cor-loja, #ff8a5c) 45%, var(--linha));
+  background: color-mix(in srgb, var(--cor-loja, #ff8a5c) 10%, transparent); transition: background 0.15s;
+}
+.faixa-cabeca .ver-mais:hover { background: color-mix(in srgb, var(--cor-loja, #ff8a5c) 20%, transparent); }
+.faixa-cabeca .ver-mais span { transition: transform 0.15s; }
+.faixa-cabeca .ver-mais:hover span { transform: translateX(3px); }
+@media (max-width: 640px) {
+  .cabeca-loja-faixa { flex-wrap: nowrap; }
+  .cabeca-loja-faixa h2 { font-size: 1.05rem; min-width: 0; }
+  .cabeca-loja-faixa .contagem-faixa { display: none; }
+  .faixa-cabeca .ver-mais { padding: 5px 10px; font-size: 0.8rem; }
+}
