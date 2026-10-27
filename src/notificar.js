@@ -3,7 +3,7 @@ import './style.css';
 import { iniciarSessao, atualizarSino } from './sessao.js';
 import { listarJogos } from './destaques.js';
 import { buscarPromocoes } from './api.js';
-import { imagemGrande } from './lojas.js';
+import { imgJogo } from './lojas.js';
 import {
   listarSeguindo,
   seguirJogo,
@@ -84,7 +84,7 @@ function itemJogo(j) {
   const data = j.ultimaPromocaoEm ? j.ultimaPromocaoEm.toDate().toLocaleDateString('pt-BR') : '';
   return `
     <div class="jogo-item${seg ? ' seguindo' : ''}">
-      <img src="${esc(imagemGrande(j.imagem))}" alt="" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
+      ${imgJogo(j)}
       <div style="min-width:0">
         <strong title="${esc(j.titulo)}">${esc(j.titulo)}</strong>
         <small>${j.emOfertaAgora ? `Em oferta agora · -${j.desconto}%` : data ? `Última oferta em ${data}` : ''}</small>

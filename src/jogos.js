@@ -3,11 +3,11 @@ import './style.css';
 import { iniciarSessao } from './sessao.js';
 import { listarCatalogo } from './catalogo.js';
 import { carregarContexto, precoEmReal } from './contexto.js';
-import { varsDaLoja, imagemGrande } from './lojas.js';
+import { varsDaLoja, imgJogo } from './lojas.js';
 import { pilulaLoja } from './cartoes.js';
 import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela, estaEstrelado } from './estrela.js';
 import { pedirPermissao, permissaoAtual, suportaNotificacoes } from './notificacoes.js';
-import { esc, IMAGEM_PADRAO } from './util.js';
+import { esc } from './util.js';
 
 const $ = (s) => document.querySelector(s);
 const grade = $('#grade-jogos');
@@ -24,7 +24,7 @@ function cartao(j, i) {
   return `
     <article class="jogo" data-deal="${esc(j.gameID)}" style="${varsDaLoja(j.lojaId)};--i:${Math.min(i, 20)}">
       <a class="jogo-capa" href="${busca}" tabindex="-1">
-        <img src="${esc(imagemGrande(j.imagem))}" alt="" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
+        ${imgJogo(j)}
         ${j.lojaId ? pilulaLoja(j.lojaId) : ''}
         ${j.ultimoDesconto >= 1 ? `<span class="desconto">-${j.ultimoDesconto}%</span>` : ''}
       </a>

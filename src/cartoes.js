@@ -1,8 +1,8 @@
 // Peças visuais compartilhadas: cartão de jogo, pílula da loja, metadados, preços e esqueletos
 import { contexto, precoEmReal } from './contexto.js';
-import { varsDaLoja, lojaPelaPlataforma, imagemGrande } from './lojas.js';
+import { varsDaLoja, lojaPelaPlataforma, imgJogo } from './lojas.js';
 import { botaoEstrela } from './estrela.js';
-import { esc, IMAGEM_PADRAO } from './util.js';
+import { esc } from './util.js';
 
 export function pilulaLoja(lojaId, textoAlternativo = '') {
   const loja = contexto.lojas.get(lojaId);
@@ -35,7 +35,7 @@ export function cartaoJogo(p, { especial = false, i = 0 } = {}) {
   return `
     <article class="jogo" data-deal="${esc(p.dealID)}" style="${varsDaLoja(lojaId)};--i:${Math.min(i, 20)}">
       <a class="jogo-capa" href="${esc(p.link)}" target="_blank" rel="noopener sponsored" tabindex="-1">
-        <img src="${esc(imagemGrande(p.imagem))}" alt="" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
+        ${imgJogo(p)}
         ${especial ? pilulaLoja(lojaId, p.plataformas) : ''}
         ${p.desconto >= 1 ? `<span class="desconto${gratis ? ' gratis' : ''}">${gratis ? 'GRÁTIS' : `-${p.desconto}%`}</span>` : ''}
       </a>

@@ -7,7 +7,7 @@ import { cartaoJogo as cartaoBase, pilulaLoja, metas, precos, esqueletos, setas,
 import { salvarNoCatalogo } from './catalogo.js';
 import { buscarPromocoes, buscarGratis } from './api.js';
 import { contexto, carregarContexto, nomeDaLoja } from './contexto.js';
-import { ORDEM_LOJAS, varsDaLoja, imagemGrande } from './lojas.js';
+import { ORDEM_LOJAS, varsDaLoja, imgJogo } from './lojas.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
 import { guardarPreferencia, lerPreferencia } from './site.js';
 
@@ -72,7 +72,7 @@ function renderizarBillboard(itens) {
     elBillboard.classList.remove('vazio');
     elBillboard.setAttribute('style', varsDaLoja(p.lojaId));
     elBillboard.innerHTML = `
-      <div class="billboard-fundo"><img src="${esc(imagemGrande(p.imagem))}" alt="" /></div>
+      <div class="billboard-fundo">${imgJogo(p, 'banner', 'fetchpriority="high"')}</div>
       <div class="container billboard-conteudo" key="${n}">
         <div class="billboard-rotulo">
           <span class="selo-tipo">${p.comentario !== undefined ? 'Destaque' : 'Em alta'}</span>
@@ -182,6 +182,19 @@ async function carregarGratis() {
     lista.innerHTML = jogos.length
       ? jogos.map((p, i) => cartaoJogo(p, { especial: true, i })).join('')
       : '<div class="aviso">Nenhum jogo grátis no momento.</div>';
+    // no computador mostra 8 e um botão para expandir (sem rolagem dentro da coluna)
+    if (jogos.length > 8) {
+      lista.insertAdjacentHTML(
+        'afterend',
+        `<button class="botao secundario pequeno ver-todos-gratis" type="button">Ver todos os ${jogos.length} grátis</button>`,
+      );
+      const botao = lista.nextElementSibling;
+      botao.addEventListener('click', () => {
+        const coluna = lista.closest('.coluna-gratis');
+        coluna.classList.toggle('expandida');
+        botao.textContent = coluna.classList.contains('expandida') ? 'Mostrar menos' : `Ver todos os ${jogos.length} grátis`;
+      });
+    }
   } catch (erro) {
     console.error(erro);
     lista.innerHTML = '<div class="aviso erro">Não foi possível carregar os jogos grátis.</div>';
@@ -234,6 +247,18 @@ $('#busca').addEventListener('input', (e) => {
     }
   }, 450);
 });
+
+// ---------- Coluna Grátis no celular ----------
+// No computador ela fica na lateral; em telas menores vai para logo depois dos Destaques
+const colunaGratis = document.querySelector('.coluna-gratis');
+const layout = document.querySelector('.vitrine-layout');
+const telaPequena = matchMedia('(max-width: 1080px)');
+function posicionarGratis() {
+  if (telaPequena.matches) $('#faixa-destaques').after(colunaGratis);
+  else layout.append(colunaGratis);
+}
+posicionarGratis();
+telaPequena.addEventListener('change', posicionarGratis);
 
 // ---------- Interações ----------
 ativarSetas();

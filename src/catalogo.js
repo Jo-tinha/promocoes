@@ -34,6 +34,7 @@ function paraFirestore(p) {
     gameID: p.gameID,
     titulo: String(p.titulo).slice(0, 190),
     imagem: String(p.imagem || '').slice(0, 490),
+    steamAppID: String(p.steamAppID || '').slice(0, 12),
     lojaId: String(p.lojaId || ''),
     ultimoPreco: Number(p.precoPromocional) || 0,
     ultimoPrecoNormal: Number(p.precoNormal) || 0,

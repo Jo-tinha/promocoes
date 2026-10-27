@@ -51,3 +51,50 @@ export function lojaPelaPlataforma(texto = '') {
 export function imagemGrande(url = '') {
   return url.replace(/capsule_sm_120\.jpg/, 'header.jpg');
 }
+
+// ---------- Imagens em alta resolução ----------
+// A CheapShark informa o ID do jogo na Steam (steamAppID), mesmo quando a promoção é de outra loja.
+// Com ele, usamos a arte oficial da Steam: 1920 px no banner e 616 px nos cartões.
+const STEAM_CDN = 'https://shared.akamai.steamstatic.com/store_item_assets/steam/apps';
+const STEAM_CDN_ANTIGO = 'https://cdn.akamai.steamstatic.com/steam/apps';
+const PIXEL_VAZIO =
+  'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 4 3%27%3E%3Crect width=%274%27 height=%273%27 fill=%27%23171b24%27/%3E%3C/svg%3E';
+
+export function idSteam(p) {
+  if (p.steamAppID) return String(p.steamAppID);
+  const m = String(p.imagem || '').match(/\/apps\/(\d+)\//);
+  return m ? m[1] : null;
+}
+
+function fontesDaImagem(p, tipo) {
+  const id = idSteam(p);
+  const fontes = [];
+  if (id) {
+    // caminho novo e o antigo do CDN da Steam (alguns jogos só têm um deles)
+    if (tipo === 'banner') fontes.push(`${STEAM_CDN}/${id}/library_hero.jpg`, `${STEAM_CDN_ANTIGO}/${id}/library_hero.jpg`);
+    fontes.push(`${STEAM_CDN}/${id}/capsule_616x353.jpg`, `${STEAM_CDN_ANTIGO}/${id}/capsule_616x353.jpg`, `${STEAM_CDN}/${id}/header.jpg`);
+  }
+  if (p.imagem) fontes.push(imagemGrande(p.imagem));
+  fontes.push(PIXEL_VAZIO);
+  return [...new Set(fontes)];
+}
+
+const aspas = (t) => String(t).replaceAll('&', '&amp;').replaceAll('"', '&quot;');
+
+// <img> que tenta a melhor imagem e, se ela não existir, passa para a próxima da lista
+export function imgJogo(p, tipo = 'cartao', atributos = 'loading="lazy"') {
+  const [primeira, ...resto] = fontesDaImagem(p, tipo);
+  return `<img src="${aspas(primeira)}" data-alternativas="${aspas(resto.join('|'))}" onerror="proximaImagem(this)" alt="" ${atributos} />`;
+}
+
+if (typeof window !== 'undefined') {
+  window.proximaImagem = (img) => {
+    const resto = (img.dataset.alternativas || '').split('|').filter(Boolean);
+    if (!resto.length) {
+      img.onerror = null;
+      return;
+    }
+    img.dataset.alternativas = resto.slice(1).join('|');
+    img.src = resto[0];
+  };
+}

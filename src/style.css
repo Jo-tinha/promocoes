@@ -23,6 +23,11 @@
 }
 
 * { box-sizing: border-box; }
+html { scrollbar-color: #3a4256 var(--fundo); scrollbar-width: thin; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--fundo); }
+::-webkit-scrollbar-thumb { background: #3a4256; border-radius: 10px; border: 2px solid var(--fundo); }
+::-webkit-scrollbar-thumb:hover { background: #4b5570; }
 [hidden] { display: none !important; }
 body {
   margin: 0; min-height: 100vh; overflow-x: clip; /* nada passa da largura da tela; cada faixa rola sozinha */
@@ -259,7 +264,9 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
     linear-gradient(90deg, rgba(13, 15, 20, 0.97) 0%, rgba(13, 15, 20, 0.75) 38%, rgba(13, 15, 20, 0.1) 75%),
     linear-gradient(0deg, var(--fundo) 0%, rgba(13, 15, 20, 0) 45%);
 }
-.billboard-conteudo { padding: 48px 0 44px; max-width: 560px; animation: subir 0.6s ease both; }
+.billboard-conteudo { padding: 48px 0 44px; animation: subir 0.6s ease both; }
+/* o container ocupa a largura do site (alinhado com o logo); só o texto tem largura máxima */
+.billboard-conteudo > * { max-width: 600px; }
 .billboard-rotulo { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
 .billboard h1 { font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.02; letter-spacing: -0.03em; margin: 0 0 12px; }
 .billboard p { color: #c9cfdb; margin: 0 0 14px; max-width: 48ch; }
@@ -386,16 +393,25 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 
 /* Coluna Grátis */
 .coluna-gratis {
-  position: sticky; top: 84px; border-radius: 16px; padding: 16px; margin-top: 26px;
+  border-radius: 16px; padding: 16px; margin-top: 26px; min-width: 0;
   background: linear-gradient(180deg, rgba(255, 210, 63, 0.08), var(--cartao) 30%); border: 1px solid rgba(255, 210, 63, 0.25);
-  max-height: calc(100vh - 100px); overflow-y: auto; scrollbar-width: thin;
 }
-@media (max-width: 1080px) { .coluna-gratis { position: static; max-height: none; } }
+
 .coluna-gratis h2 { margin: 0 0 4px; font-size: 1.3rem; }
 .coluna-gratis h2 span { color: #ffd23f; }
 .coluna-gratis > p { margin: 0 0 14px; color: var(--texto-suave); font-size: 0.82rem; }
 .lista-gratis { display: grid; gap: 12px; }
-@media (max-width: 1080px) { .lista-gratis { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); } }
+@media (min-width: 1081px) { .coluna-gratis:not(.expandida) .lista-gratis > .jogo:nth-child(n + 9) { display: none; } }
+.ver-todos-gratis { width: 100%; margin-top: 12px; }
+/* Tablet e celular: a coluna Grátis vira uma faixa horizontal como as das lojas */
+@media (max-width: 1080px) {
+  .coluna-gratis { margin-top: 18px; }
+  .lista-gratis { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; scrollbar-width: none; }
+  .lista-gratis::-webkit-scrollbar { display: none; }
+  .lista-gratis > * { flex: 0 0 auto; scroll-snap-align: start; }
+  .coluna-gratis .lista-gratis .jogo { width: 240px; } /* mais específico que o width:auto da coluna lateral */
+  .ver-todos-gratis { display: none; }
+}
 .lista-gratis .jogo { width: auto; }
 .credito { font-size: 0.75rem; color: var(--texto-suave); margin-top: 12px; }
 .credito a { color: var(--texto); }
@@ -445,19 +461,20 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 
 /* ===== Aviso de cookies ===== */
 .cookies {
-  position: fixed; z-index: 50; left: 50%; bottom: 16px; transform: translateX(-50%);
-  width: min(760px, calc(100% - 24px)); display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;
+  position: fixed; z-index: 50; left: 12px; right: 12px; bottom: 16px; margin: 0 auto; max-width: 820px;
+  display: flex; gap: 14px 18px; align-items: center; flex-wrap: wrap;
   padding: 16px 18px; border-radius: 16px; background: rgba(23, 27, 36, 0.97); border: 1px solid var(--linha);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55); backdrop-filter: blur(10px); animation: subir 0.35s ease both;
 }
-.cookies.saindo { opacity: 0; transform: translate(-50%, 12px); transition: 0.25s; }
+.cookies.saindo { opacity: 0; transform: translateY(12px); transition: 0.25s; }
 .cookies-texto { flex: 1 1 360px; font-size: 0.86rem; }
 .cookies-texto p { margin: 6px 0 0; color: var(--texto-suave); }
 .cookies-texto a { color: var(--destaque-2); }
 .cookies-opcoes { display: grid; gap: 8px; margin-top: 12px; }
 .cookies-opcao { display: flex; gap: 10px; align-items: flex-start; font-size: 0.84rem; color: var(--texto-suave); }
 .cookies-opcao input { margin-top: 3px; accent-color: var(--destaque); }
-.cookies-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.cookies-acoes { display: flex; gap: 8px; flex-wrap: wrap; flex: 0 0 auto; }
+.cookies-acoes .botao { white-space: nowrap; }
 
 /* ===== Voltar ao topo ===== */
 .voltar-topo {
@@ -532,4 +549,87 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 .aviso-notificacao {
   margin-top: 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255, 210, 63, 0.3);
   background: rgba(255, 210, 63, 0.07); font-size: 0.9rem; color: #e6dfc4; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+
+/* =====================================================================
+   RESPONSIVIDADE — tablet e celular
+   ===================================================================== */
+.billboard-fundo img { object-position: center 30%; }
+
+@media (max-width: 900px) {
+  .billboard::before {
+    /* no tablet/celular o texto fica embaixo da imagem: degradê de baixo para cima */
+    background:
+      linear-gradient(0deg, var(--fundo) 6%, rgba(13, 15, 20, 0.88) 42%, rgba(13, 15, 20, 0.25) 75%, rgba(13, 15, 20, 0.55) 100%);
+  }
+}
+
+@media (max-width: 640px) {
+  /* Cabeçalho: marca e conta na primeira linha, menu rolável embaixo */
+  .topo-linha { gap: 8px 12px; padding: 10px 0 8px; }
+  .marca { font-size: 1.2rem; }
+  .nav { overflow-x: auto; scrollbar-width: none; margin: 0 -4px; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-link { padding: 7px 10px; font-size: 0.88rem; white-space: nowrap; }
+  .conta { margin-left: auto; }
+  .conta .botao { padding: 6px 12px; }
+
+  /* Banner */
+  .billboard { min-height: 400px; }
+  .billboard-conteudo { padding: 120px 0 34px; }
+  .billboard h1 { font-size: 1.75rem; margin-bottom: 8px; }
+  .billboard p { font-size: 0.9rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .billboard .precos { padding-bottom: 14px; }
+  .billboard-acoes { gap: 8px; }
+  .billboard-acoes .botao { padding: 10px 16px; font-size: 0.92rem; flex: 1 1 auto; }
+  .billboard-rotulo { margin-bottom: 10px; }
+
+  /* Busca e aviso de conta */
+  .barra-busca input { padding: 11px 14px; font-size: 1rem; } /* 16px evita o zoom automático do iPhone */
+  .chamada { font-size: 0.85rem; padding: 12px; }
+
+  /* Faixas */
+  .faixa-cabeca { flex-wrap: wrap; gap: 4px 10px; }
+  .faixa-cabeca h2 { font-size: 1.15rem; }
+  .cartao-ver-todas { width: 140px; font-size: 0.85rem; }
+
+  /* Filtros empilhados */
+  .filtros { gap: 8px; }
+  .filtros input, .filtros select { flex: 1 1 100%; font-size: 1rem; }
+
+  /* Aviso de cookies: botões ocupam a largura toda */
+  .cookies { bottom: 10px; left: 8px; right: 8px; padding: 14px; gap: 12px; }
+  .cookies-texto { flex-basis: 100%; font-size: 0.82rem; }
+  .cookies-acoes { width: 100%; }
+  .cookies-acoes .botao { flex: 1 1 0; padding: 9px 8px; }
+  .cookies-acoes .botao:last-child { flex-basis: 100%; order: -1; }
+
+  .voltar-topo { right: 12px; bottom: 12px; width: 40px; height: 40px; }
+  .toast { bottom: 64px; }
+
+  /* Página da loja */
+  .cabeca-loja-conteudo { padding: 16px 0 20px; }
+  .cabeca-loja-titulo img { width: 48px; height: 48px; }
+
+  /* Painel do admin e formulários */
+  .abas { padding-top: 12px; }
+  .aba { padding: 10px 12px; font-size: 0.86rem; }
+  .caixa { padding: 16px; }
+  .form .linha2 { grid-template-columns: 1fr; }
+  .form input, .form select, .form textarea { font-size: 1rem; }
+  .secao-cabeca .form-acoes { width: 100%; }
+  .login { margin: 28px auto; }
+  table { font-size: 0.82rem; }
+  .miniatura { width: 72px; height: 34px; }
+
+  /* Páginas de texto */
+  .texto-legal { margin: 24px auto 40px; }
+  .erro-404 { margin: 48px auto; }
+  .erro-404 .numero { font-size: 4.5rem; }
+}
+
+@media (max-width: 380px) {
+  .jogo { width: 200px; }
+  .grade-jogos { gap: 8px; }
+  .billboard h1 { font-size: 1.55rem; }
 }
