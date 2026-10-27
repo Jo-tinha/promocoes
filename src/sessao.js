@@ -2,7 +2,8 @@
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from './firebase.js';
 import { ehAdmin, buscarAvisos } from './usuarios.js';
-import { carregarContexto, dolarParaReal } from './contexto.js';
+import { carregarContexto, dolarParaReal, precoEmReal } from './contexto.js';
+import { notificarNovos, prepararNotificacoes } from './notificacoes.js';
 import { esc } from './util.js';
 import { iniciarSite } from './site.js';
 
@@ -16,10 +17,11 @@ function renderizarTopo(usuario, admin, pagina) {
   const nav = usuario
     ? [
         link('/', 'Vitrine', pagina === 'vitrine'),
-        link('/notificar.html', 'Notificar', pagina === 'notificar', ' <span class="contador" id="sino" hidden></span>'),
+        link('/jogos.html', 'Games', pagina === 'games'),
+        link('/notificar.html', 'Avisos', pagina === 'notificar', ' <span class="contador" id="sino" hidden></span>'),
         admin ? link('/admin.html', 'Painel', pagina === 'admin') : '',
       ].join('')
-    : link('/', 'Vitrine', pagina === 'vitrine');
+    : link('/', 'Vitrine', pagina === 'vitrine') + link('/jogos.html', 'Games', pagina === 'games');
 
   const conta = usuario
     ? `<span class="usuario-email" title="${esc(usuario.email)}">${esc(usuario.displayName || usuario.email)}</span>
@@ -41,11 +43,12 @@ function renderizarTopo(usuario, admin, pagina) {
   });
 }
 
-// Mostra no menu "Notificar" quantos avisos novos o usuário tem
+// Mostra no menu "Avisos" quantos avisos novos o usuário tem e dispara as notificações do navegador
 export async function atualizarSino(uid) {
   try {
     await carregarContexto();
-    const { novos } = await buscarAvisos(uid, dolarParaReal);
+    const { avisos, novos } = await buscarAvisos(uid, dolarParaReal);
+    notificarNovos(avisos, precoEmReal); // notificação do navegador, se o usuário permitiu
     const sino = document.querySelector('#sino');
     if (!sino) return;
     sino.hidden = novos === 0;
@@ -56,15 +59,23 @@ export async function atualizarSino(uid) {
   }
 }
 
-// pagina: 'vitrine' | 'notificar' | 'admin' | 'entrar'
+// pagina: 'vitrine' | 'games' | 'loja' | 'notificar' | 'admin' | 'entrar' | 'info'
 // aoMudar({ usuario, admin }) é chamado sempre que o login muda
 export function iniciarSessao(pagina, aoMudar) {
   iniciarSite();
+  prepararNotificacoes();
   renderizarTopo(null, false, pagina);
   onAuthStateChanged(auth, async (usuario) => {
     const admin = usuario ? await ehAdmin(usuario.uid) : false;
     renderizarTopo(usuario, admin, pagina);
     aoMudar?.({ usuario, admin });
-    if (usuario) atualizarSino(usuario.uid);
+    clearInterval(checagem);
+    if (usuario) {
+      atualizarSino(usuario.uid);
+      // enquanto a aba estiver aberta, confere os jogos estrelados a cada 15 minutos
+      checagem = setInterval(() => atualizarSino(usuario.uid), 15 * 60 * 1000);
+    }
   });
 }
+
+let checagem;

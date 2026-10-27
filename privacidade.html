@@ -20,7 +20,8 @@
       <ul>
         <li><strong>Visitantes sem conta:</strong> nenhum dado pessoal é guardado pelo Buba Promo. A vitrine funciona sem login.</li>
         <li><strong>Conta:</strong> nome, e-mail e um identificador gerado pelo Firebase Authentication. Se você entrar com o Google, recebemos nome e e-mail da sua conta Google.</li>
-        <li><strong>Notificar:</strong> os jogos que você escolhe acompanhar, o preço-alvo opcional e quais avisos você já viu.</li>
+        <li><strong>Jogos estrelados:</strong> os jogos que você estrela para acompanhar, o preço-alvo opcional e quais avisos você já viu.</li>
+        <li><strong>Catálogo Games:</strong> quando você está logado, os jogos em promoção que aparecem na tela são registrados no catálogo público (só nome, imagem, loja e preço do jogo — nada sobre você).</li>
       </ul>
       <p>Não coletamos dados de pagamento: as compras acontecem nas lojas, fora do Buba Promo.</p>
 
@@ -54,12 +55,15 @@
         <table>
           <thead><tr><th>Categoria</th><th>O que guarda</th><th>Pode desativar?</th></tr></thead>
           <tbody>
-            <tr><td><strong>Essenciais</strong></td><td>Sessão de login do Firebase e a sua escolha sobre cookies</td><td>Não, o site precisa delas para funcionar</td></tr>
+            <tr><td><strong>Essenciais</strong></td><td>Sessão de login do Firebase, a sua escolha sobre cookies, o registro técnico do service worker e listas internas que evitam repetir notificações e regravar jogos no catálogo</td><td>Não, o site precisa delas para funcionar</td></tr>
             <tr><td><strong>Preferências</strong></td><td>A última busca feita na vitrine, só neste aparelho</td><td>Sim — começa desligada</td></tr>
           </tbody>
         </table>
       </div>
       <p>Você pode mudar a sua escolha a qualquer momento em <button type="button" class="link-botao" id="link-cookies" style="color:var(--destaque-2)">Preferências de cookies</button>. Ao desativar as preferências, o que foi guardado é apagado. Lojas e serviços externos que você abrir pelos links têm políticas próprias.</p>
+
+      <h2 id="notificacoes">Notificações do navegador</h2>
+      <p>Ao estrelar um jogo, o navegador pergunta se o Buba Promo pode mostrar notificações. Elas só são exibidas se você permitir e enquanto o site estiver aberto em alguma aba. Você pode desativá-las a qualquer momento nas configurações do navegador (ícone ao lado do endereço do site).</p>
 
       <h2 id="guarda">Por quanto tempo guardamos</h2>
       <p>Os dados da conta ficam guardados enquanto a conta existir. As preferências ficam no seu navegador até você apagá-las ou retirar o consentimento.</p>

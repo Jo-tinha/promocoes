@@ -31,7 +31,16 @@ export async function destacar(p, comentario = '') {
   if (p.gameID) {
     await setDoc(
       doc(db, 'jogos', p.gameID),
-      { gameID: p.gameID, titulo: p.titulo, imagem: p.imagem, ultimaPromocaoEm: serverTimestamp() },
+      {
+        gameID: p.gameID,
+        titulo: p.titulo,
+        imagem: p.imagem || '',
+        lojaId: p.lojaId || '',
+        ultimoPreco: p.precoPromocional,
+        ultimoPrecoNormal: p.precoNormal,
+        ultimoDesconto: p.desconto,
+        ultimaPromocaoEm: serverTimestamp(),
+      },
       { merge: true },
     );
   }

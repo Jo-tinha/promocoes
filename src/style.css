@@ -476,3 +476,60 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 .texto-legal table { margin: 12px 0; }
 .erro-404 { text-align: center; margin: 80px auto; max-width: 520px; }
 .erro-404 .numero { font-family: 'Space Grotesk'; font-size: 6rem; font-weight: 700; line-height: 1; color: var(--destaque); }
+
+/* ===== Estrela ===== */
+.estrela {
+  width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--linha); background: var(--fundo-2);
+  color: #ffd23f; font-size: 1.05rem; line-height: 1; cursor: pointer; transition: transform 0.15s, background 0.15s;
+}
+.estrela:hover { transform: scale(1.12); border-color: #ffd23f; }
+.estrela[aria-pressed='true'] { background: #ffd23f; color: #241a00; border-color: #ffd23f; animation: pulso 0.35s ease; }
+@keyframes pulso { 50% { transform: scale(1.25); } }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); z-index: 60; opacity: 0; pointer-events: none;
+  background: var(--cartao-2); border: 1px solid var(--linha); color: var(--texto); padding: 12px 18px; border-radius: 12px;
+  font-size: 0.9rem; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5); transition: 0.25s; max-width: calc(100% - 32px);
+}
+.toast.visivel { opacity: 1; transform: translate(-50%, 0); }
+
+/* ===== "Ver todas" ===== */
+.ver-todas { color: var(--cor-loja); font-weight: 700; font-size: 0.85rem; text-decoration: none; }
+.ver-todas:hover { text-decoration: underline; }
+.cartao-ver-todas {
+  width: 180px; border-radius: 14px; display: grid; place-items: center; text-align: center; padding: 18px;
+  border: 1px dashed color-mix(in srgb, var(--cor-loja) 55%, var(--linha)); color: var(--cor-loja);
+  font-weight: 700; text-decoration: none; background: color-mix(in srgb, var(--cor-loja) 8%, transparent);
+}
+.cartao-ver-todas:hover { background: color-mix(in srgb, var(--cor-loja) 16%, transparent); }
+
+/* ===== Grade de tela cheia (página da loja e Games) ===== */
+.grade-jogos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; padding-bottom: 12px; }
+.grade-jogos .jogo { width: auto; }
+@media (max-width: 520px) {
+  .grade-jogos { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .grade-jogos .jogo-corpo { padding: 8px 9px 10px; }
+  .grade-jogos .jogo-corpo h3 { font-size: 0.85rem; }
+  .grade-jogos .preco-final { font-size: 1.05rem; }
+  .grade-jogos .metas { display: none; }
+}
+
+.cabeca-loja {
+  --cor-loja: var(--destaque); --fundo-loja: var(--cartao);
+  background:
+    radial-gradient(800px 260px at 15% 0%, color-mix(in srgb, var(--cor-loja) 40%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--fundo-loja), var(--fundo));
+  border-bottom: 1px solid color-mix(in srgb, var(--cor-loja) 35%, var(--linha));
+}
+.cabeca-loja-conteudo { padding: 22px 0 28px; }
+.cabeca-loja-titulo { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
+.cabeca-loja-titulo img { width: 64px; height: 64px; border-radius: 14px; background: #000; padding: 6px; }
+.cabeca-loja h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.8rem); letter-spacing: -0.02em; }
+.voltar { color: var(--texto-suave); text-decoration: none; font-size: 0.9rem; }
+.voltar:hover { color: var(--texto); }
+.barra-loja { margin-top: 20px; }
+
+.aviso-notificacao {
+  margin-top: 16px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255, 210, 63, 0.3);
+  background: rgba(255, 210, 63, 0.07); font-size: 0.9rem; color: #e6dfc4; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}

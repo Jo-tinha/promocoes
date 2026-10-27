@@ -35,8 +35,8 @@ function converter(p) {
 
 // Promoções atuais na CheapShark.
 // ordem: 'Deal Rating' (melhor custo-benefício), 'Recent', 'Savings', 'Price', 'Reviews'
-export async function buscarPromocoes({ termo = '', lojaId = '', ordem = 'Deal Rating', limite = 30, precoMaximo = null } = {}) {
-  const params = new URLSearchParams({ onSale: '1', pageSize: String(limite), sortBy: ordem });
+export async function buscarPromocoes({ termo = '', lojaId = '', ordem = 'Deal Rating', limite = 30, precoMaximo = null, pagina = 0 } = {}) {
+  const params = new URLSearchParams({ onSale: '1', pageSize: String(limite), sortBy: ordem, pageNumber: String(pagina) });
   if (termo) params.set('title', termo);
   if (lojaId) params.set('storeID', lojaId);
   if (precoMaximo !== null) params.set('upperPrice', String(precoMaximo));

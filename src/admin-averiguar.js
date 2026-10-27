@@ -4,6 +4,7 @@ import { buscarPromocoes, buscarPromocaoPorId } from './api.js';
 import { destacar, listarDestaques, atualizarDestaque, removerDestaque } from './destaques.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
 import { esc, IMAGEM_PADRAO } from './util.js';
+import { sincronizarCatalogo } from './catalogo.js';
 
 const formFiltros = document.querySelector('#filtros-averiguar');
 const selectLoja = document.querySelector('#averiguar-loja');
@@ -192,6 +193,24 @@ export async function iniciarAveriguar() {
     } finally {
       botaoAtualizarTodas.disabled = false;
       botaoAtualizarTodas.textContent = 'Atualizar todos os preços';
+    }
+  });
+
+  const botaoSincronizar = document.querySelector('#sincronizar');
+  botaoSincronizar.addEventListener('click', async () => {
+    botaoSincronizar.disabled = true;
+    try {
+      const total = await sincronizarCatalogo({
+        paginas: 10,
+        aoProgredir: (feitas, de, jogos) => (botaoSincronizar.textContent = `Sincronizando ${feitas}/${de} (${jogos} jogos)…`),
+      });
+      alert(`${total} promoções gravadas no catálogo Games.`);
+    } catch (erro) {
+      console.error(erro);
+      alert('A sincronização parou no meio. O que já foi gravado fica salvo; tente de novo mais tarde.');
+    } finally {
+      botaoSincronizar.disabled = false;
+      botaoSincronizar.textContent = 'Sincronizar catálogo Games';
     }
   });
 

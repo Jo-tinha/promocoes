@@ -24,6 +24,9 @@ Aplicação web de promoções de jogos de PC — Projeto integrador, Atividade 
 
 ```
 index.html                  Vitrine (pública) + recomendações do dia (logado)
+loja.html                   Todas as promoções de uma loja em grade de tela cheia ("Ver todas")
+jogos.html                  Games: catálogo de todos os jogos que já passaram em promoção, com estrela
+public/sw.js                Service worker para as notificações do navegador
 entrar.html                 Login, cadastro, Google e "esqueci minha senha"
 notificar.html              Jogos acompanhados e avisos (logado)
 admin.html                  Painel do admin
@@ -31,7 +34,11 @@ src/firebase.js             Configuração do Firebase (projeto joao-iam)
 src/sessao.js               Cabeçalho compartilhado, login e papel de admin
 src/api.js                  CheapShark e AwesomeAPI
 src/contexto.js             Cotação e lojas compartilhadas entre as telas
-src/destaques.js            Coleções "destaques" e "jogos"
+src/destaques.js            Coleção "destaques"
+src/catalogo.js             Coleção "jogos" (catálogo Games): salvar, listar e sincronizar
+src/estrela.js              Estrelar jogos (seguir) em qualquer página
+src/notificacoes.js         Permissão e notificações do navegador
+src/cartoes.js              Cartão de jogo e peças visuais compartilhadas
 src/lojas.js                Cores de cada loja, ordem das faixas, capas grandes da Steam
 api/gratis.js               Função do Vercel que busca os jogos grátis da GamerPower
 src/recomendacoes.js        Coleção "recomendacoes"
@@ -75,3 +82,9 @@ npm run dev
 ## Publicar no Vercel
 
 Importe o repositório em <https://vercel.com/new>. O preset **Vite** é detectado (build `npm run build`, saída `dist`). Clique em **Deploy**. Cada `git push` na `main` publica uma nova versão.
+
+## Games, estrela e notificações
+
+- **Games** (`/jogos.html`): todo jogo que já apareceu em promoção fica salvo na coleção `jogos`. O catálogo cresce sozinho quando usuários logados navegam (cada jogo é gravado no máximo uma vez por dia por navegador) e o admin pode puxar ~600 de uma vez em **Painel › Destaques › Sincronizar catálogo Games**.
+- **Estrela ☆**: em qualquer cartão (vitrine, loja, Games). Estrelar grava em `usuarios/{uid}/seguindo` e, na primeira vez, o navegador pede permissão para notificações.
+- **Notificações**: com o site aberto em alguma aba, os jogos estrelados são conferidos ao abrir e a cada 15 minutos; promoções novas viram notificação do navegador (via `public/sw.js`, necessário no Android). Avisar com o navegador fechado exigiria um servidor de push (Firebase Cloud Messaging + back-end), fora do escopo.

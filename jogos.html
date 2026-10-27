@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0f14" />
+    <title>Games · Buba Promo</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff5c35'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EB%3C/text%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="topo" id="topo"></header>
+
+    <main class="container">
+      <section class="abertura">
+        <h1>Games</h1>
+        <p>Todo jogo que já passou em promoção pelo Buba Promo fica salvo aqui. <strong>Estrele ☆</strong> os que você quer acompanhar e receba uma notificação no navegador quando entrarem em promoção.</p>
+        <div class="aviso-notificacao" id="aviso-notificacao" hidden></div>
+      </section>
+
+      <div class="filtros">
+        <input type="search" id="busca-jogos" placeholder="Buscar jogo" aria-label="Buscar jogo" />
+        <select id="ordem-jogos" aria-label="Ordenar">
+          <option value="recentes">Vistos em promoção recentemente</option>
+          <option value="az">A–Z</option>
+          <option value="desconto">Maior último desconto</option>
+        </select>
+        <select id="filtro-jogos" aria-label="Mostrar">
+          <option value="todos">Todos</option>
+          <option value="estrelados">Só os estrelados</option>
+        </select>
+      </div>
+      <p class="secao-nota" id="nota-jogos" style="margin:-6px 0 14px"></p>
+      <div class="grade-jogos" id="grade-jogos"></div>
+      <div class="mais-lojas"><button class="botao secundario" type="button" id="mostrar-mais" hidden>Mostrar mais</button></div>
+    </main>
+
+    <footer id="rodape"></footer>
+
+    <script type="module" src="/src/jogos.js"></script>
+  </body>
+</html>

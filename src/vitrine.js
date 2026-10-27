@@ -1,11 +1,13 @@
 import './style.css';
-import { iniciarSessao, atualizarSino } from './sessao.js';
+import { iniciarSessao } from './sessao.js';
 import { listarDestaques } from './destaques.js';
 import { listarRecomendacoes, TIPOS } from './recomendacoes.js';
-import { listarSeguindo, seguirJogo, deixarDeSeguir } from './usuarios.js';
+import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela } from './estrela.js';
+import { cartaoJogo as cartaoBase, pilulaLoja, metas, precos, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
+import { salvarNoCatalogo } from './catalogo.js';
 import { buscarPromocoes, buscarGratis } from './api.js';
-import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
-import { ORDEM_LOJAS, varsDaLoja, lojaPelaPlataforma, imagemGrande } from './lojas.js';
+import { contexto, carregarContexto, nomeDaLoja } from './contexto.js';
+import { ORDEM_LOJAS, varsDaLoja, imagemGrande } from './lojas.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
 import { guardarPreferencia, lerPreferencia } from './site.js';
 
@@ -16,68 +18,29 @@ const botaoMaisLojas = $('#mais-lojas');
 
 const estado = {
   usuario: null,
-  seguindo: new Set(), // gameIDs que o usuário acompanha
-  promos: new Map(), // dealID → promoção exibida (para o botão Notificar)
+  promos: new Map(), // dealID → promoção exibida (para redesenhar estrelas e salvar no catálogo)
   lojasPendentes: [],
 };
 
 const LOJAS_POR_VEZ = 6;
 
-// ---------- Peças visuais ----------
-function pilulaLoja(lojaId, textoAlternativo = '') {
-  const loja = contexto.lojas.get(lojaId);
-  const nome = loja?.nome || textoAlternativo || 'Loja';
-  return `<span class="pilula-loja" style="${varsDaLoja(lojaId)}">
-    ${loja ? `<img src="${esc(loja.icone)}" alt="" />` : ''}${esc(nome)}</span>`;
-}
-
-function metas(p) {
-  const itens = [];
-  if (p.avaliacaoPct) itens.push(`<span class="meta${p.avaliacaoPct >= 80 ? ' bom' : ''}" title="${esc(p.avaliacao)} na Steam">★ ${p.avaliacaoPct}%</span>`);
-  if (p.metacritic) itens.push(`<span class="meta mc" title="Nota no Metacritic">MC ${p.metacritic}</span>`);
-  if (p.lancamento) itens.push(`<span class="meta">${p.lancamento.getFullYear()}</span>`);
-  if (p.termina) itens.push(`<span class="meta">até ${p.termina.toLocaleDateString('pt-BR')}</span>`);
-  return itens.length ? `<div class="metas">${itens.join('')}</div>` : '';
-}
-
-function precos(p) {
-  const gratis = p.precoPromocional === 0;
-  return `<div class="precos">
-    ${p.precoNormal > 0 ? `<span class="preco-antigo">${precoEmReal(p.precoNormal)}</span>` : ''}
-    <span class="preco-final">${gratis ? 'Grátis' : precoEmReal(p.precoPromocional)}</span>
-  </div>`;
-}
-
-function botaoSino(p) {
-  if (!estado.usuario || !p.gameID) return '';
-  const segue = estado.seguindo.has(p.gameID);
-  return `<button class="sino" type="button" data-seguir="${esc(p.dealID)}" aria-pressed="${segue}"
-            title="${segue ? 'Você recebe avisos deste jogo' : 'Avisar quando este jogo estiver em promoção'}">🔔</button>`;
-}
-
-// especial = faixa que mistura lojas (Destaques, Grátis, Busca): mostra a logo da loja pequena no topo
-function cartaoJogo(p, { especial = false, i = 0 } = {}) {
+// ---------- Cartões ----------
+// Guarda cada promoção exibida e salva no catálogo "Games" (só com usuário logado)
+function cartaoJogo(p, opcoes) {
   estado.promos.set(p.dealID, p);
-  const lojaId = p.lojaId || lojaPelaPlataforma(p.plataformas);
-  const gratis = p.precoPromocional === 0;
-  return `
-    <article class="jogo" data-deal="${esc(p.dealID)}" style="${varsDaLoja(lojaId)};--i:${i}">
-      <a class="jogo-capa" href="${esc(p.link)}" target="_blank" rel="noopener sponsored" tabindex="-1">
-        <img src="${esc(imagemGrande(p.imagem))}" alt="" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
-        ${especial ? pilulaLoja(lojaId, p.plataformas) : ''}
-        ${p.desconto >= 1 ? `<span class="desconto${gratis ? ' gratis' : ''}">${gratis ? 'GRÁTIS' : `-${p.desconto}%`}</span>` : ''}
-      </a>
-      <div class="jogo-corpo">
-        <h3 title="${esc(p.titulo)}">${esc(p.titulo)}</h3>
-        ${p.comentario ? `<p class="comentario-dedo">“${esc(p.comentario)}”</p>` : ''}
-        ${metas(p)}
-        ${precos(p)}
-        <div class="jogo-rodape">
-          <a href="${esc(p.link)}" target="_blank" rel="noopener sponsored">${gratis ? 'Resgatar' : 'Ver na loja'} →</a>
-          ${botaoSino(p)}
-        </div>
-      </div>
-    </article>`;
+  if (p.gameID) salvarDepois(p);
+  return cartaoBase(p, opcoes);
+}
+
+let filaCatalogo = [];
+let timerCatalogo;
+function salvarDepois(p) {
+  filaCatalogo.push(p);
+  clearTimeout(timerCatalogo);
+  timerCatalogo = setTimeout(() => {
+    salvarNoCatalogo(filaCatalogo);
+    filaCatalogo = [];
+  }, 1500);
 }
 
 function cartaoRecomendacao(r, i) {
@@ -95,11 +58,6 @@ function cartaoRecomendacao(r, i) {
       </div>
     </article>`;
 }
-
-const esqueletos = (n, bloco = false) =>
-  (bloco ? '<div class="esqueleto bloco"></div>' : '') + Array.from({ length: n }, () => '<div class="esqueleto"></div>').join('');
-
-const setas = '<button class="seta esq" type="button" aria-label="Rolar para a esquerda">‹</button><button class="seta dir" type="button" aria-label="Rolar para a direita">›</button>';
 
 // ---------- Banner principal ----------
 let rotacao;
@@ -127,7 +85,7 @@ function renderizarBillboard(itens) {
         ${precos(p)}
         <div class="billboard-acoes">
           <a class="botao" href="${esc(p.link)}" target="_blank" rel="noopener sponsored">Ver na loja</a>
-          ${estado.usuario && p.gameID ? `<button class="botao secundario" type="button" data-seguir="${esc(p.dealID)}">${estado.seguindo.has(p.gameID) ? '✓ Notificando' : '🔔 Notificar'}</button>` : ''}
+          ${botaoEstrela(p, { grande: true })}
         </div>
       </div>
       ${itens.length > 1 ? `<div class="billboard-pontos">${itens.map((_, k) => `<button type="button" data-ponto="${k}" aria-label="Destaque ${k + 1}" aria-current="${k === n}"></button>`).join('')}</div>` : ''}`;
@@ -182,6 +140,7 @@ function blocoLoja(lojaId, lista) {
       <h2>${esc(nomeDaLoja(lojaId))}</h2>
       <span class="stat"><strong>${lista.length}</strong> ofertas</span>
       <span class="stat">até <strong>-${maior}%</strong></span>
+      <a class="ver-todas" href="/loja.html?id=${encodeURIComponent(lojaId)}">Ver todas →</a>
       <span class="linha-cor"></span>
     </div>`;
 }
@@ -196,7 +155,10 @@ async function carregarFaixaLoja(lojaId) {
   try {
     const lista = await buscarPromocoes({ lojaId, ordem: 'Deal Rating', limite: 20 });
     if (!lista.length) return secao.remove();
-    secao.querySelector('.trilho').innerHTML = blocoLoja(lojaId, lista) + lista.map((p, i) => cartaoJogo(p, { i })).join('');
+    secao.querySelector('.trilho').innerHTML =
+      blocoLoja(lojaId, lista) +
+      lista.map((p, i) => cartaoJogo(p, { i })).join('') +
+      `<a class="cartao-ver-todas" href="/loja.html?id=${encodeURIComponent(lojaId)}">Ver todas as promoções da ${esc(nomeDaLoja(lojaId))} →</a>`;
   } catch (erro) {
     console.error(erro);
     secao.remove();
@@ -274,44 +236,8 @@ $('#busca').addEventListener('input', (e) => {
 });
 
 // ---------- Interações ----------
-document.addEventListener('click', async (e) => {
-  const seta = e.target.closest('.seta');
-  if (seta) {
-    const trilho = seta.parentElement.querySelector('.trilho');
-    trilho.scrollBy({ left: (seta.classList.contains('dir') ? 1 : -1) * trilho.clientWidth * 0.85 });
-    return;
-  }
-
-  const botao = e.target.closest('[data-seguir]');
-  if (!botao || !estado.usuario) return;
-  const p = estado.promos.get(botao.dataset.seguir);
-  if (!p?.gameID) return;
-  botao.disabled = true;
-  try {
-    if (estado.seguindo.has(p.gameID)) {
-      await deixarDeSeguir(estado.usuario.uid, p.gameID);
-      estado.seguindo.delete(p.gameID);
-    } else {
-      await seguirJogo(estado.usuario.uid, { gameID: p.gameID, titulo: p.titulo, imagem: p.imagem });
-      estado.seguindo.add(p.gameID);
-    }
-    // atualiza todos os sinos daquele jogo na página
-    document.querySelectorAll('[data-seguir]').forEach((b) => {
-      const q = estado.promos.get(b.dataset.seguir);
-      if (q?.gameID !== p.gameID) return;
-      const segue = estado.seguindo.has(p.gameID);
-      if (b.classList.contains('sino')) b.setAttribute('aria-pressed', String(segue));
-      else b.textContent = segue ? '✓ Notificando' : '🔔 Notificar';
-    });
-    atualizarSino(estado.usuario.uid);
-  } catch (erro) {
-    console.error(erro);
-    alert('Não foi possível atualizar seus avisos. Tente novamente.');
-  } finally {
-    botao.disabled = false;
-  }
-});
-
+ativarSetas();
+ativarEstrelas();
 botaoMaisLojas.addEventListener('click', carregarMaisLojas);
 
 // ---------- Início ----------
@@ -320,10 +246,13 @@ async function iniciar() {
   $('#cotacao').innerHTML = contexto.cotacao ? `Dólar: <strong>${formatarReal(contexto.cotacao)}</strong>` : 'Preços em dólar';
   estado.lojasPendentes = ORDEM_LOJAS.filter((id) => contexto.lojas.has(id));
   carregarGratis();
-  const ultimaBusca = lerPreferencia('busca');
+  // ?q= vem do botão "Ver ofertas atuais" da página Games; senão, usa a última busca salva (se permitido)
+  const pedida = new URLSearchParams(location.search).get('q');
+  const ultimaBusca = pedida || lerPreferencia('busca');
   if (ultimaBusca) {
     $('#busca').value = ultimaBusca;
     $('#busca').dispatchEvent(new Event('input'));
+    if (pedida) setTimeout(() => $('#faixa-busca').scrollIntoView({ behavior: 'smooth', block: 'center' }), 700);
   }
   await carregarDestaques();
   carregarMaisLojas();
@@ -332,24 +261,12 @@ iniciar();
 
 iniciarSessao('vitrine', async ({ usuario }) => {
   estado.usuario = usuario;
+  definirUsuario(usuario);
   $('#chamada').hidden = Boolean(usuario);
-  estado.seguindo = new Set();
-  if (usuario) {
-    carregarRecomendacoes();
-    try {
-      estado.seguindo = new Set((await listarSeguindo(usuario.uid)).map((s) => s.gameID));
-    } catch (erro) {
-      console.error(erro);
-    }
-  } else {
-    $('#faixa-recomendacoes').hidden = true;
-  }
-  // redesenha os sinos dos cartões que já estão na tela
-  document.querySelectorAll('.jogo[data-deal]').forEach((cartao) => {
-    const rodape = cartao.querySelector('.jogo-rodape');
-    rodape.querySelector('.sino')?.remove();
-    const p = estado.promos.get(cartao.dataset.deal);
-    if (p) rodape.insertAdjacentHTML('beforeend', botaoSino(p));
-  });
+  if (usuario) carregarRecomendacoes();
+  else $('#faixa-recomendacoes').hidden = true;
+  await carregarEstrelas();
+  redesenharEstrelas((dealID) => estado.promos.get(dealID));
   estado.reBillboard?.();
+  if (usuario) salvarNoCatalogo([...estado.promos.values()]); // jogos que já estavam na tela antes do login
 });
