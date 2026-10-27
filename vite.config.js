@@ -1,7 +1,8 @@
 import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 
-// Páginas: vitrine (index), login/cadastro (entrar), avisos do usuário (notificar) e painel do admin (admin)
+// Páginas: vitrine (index), login/cadastro (entrar), avisos (notificar), painel (admin),
+// políticas (privacidade, termos) e página de erro 404 (o Vercel usa o 404.html automaticamente)
 export default defineConfig({
   build: {
     rollupOptions: {
@@ -10,6 +11,9 @@ export default defineConfig({
         admin: resolve(import.meta.dirname, 'admin.html'),
         entrar: resolve(import.meta.dirname, 'entrar.html'),
         notificar: resolve(import.meta.dirname, 'notificar.html'),
+        privacidade: resolve(import.meta.dirname, 'privacidade.html'),
+        termos: resolve(import.meta.dirname, 'termos.html'),
+        naoEncontrada: resolve(import.meta.dirname, '404.html'),
       },
     },
   },

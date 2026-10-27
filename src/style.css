@@ -25,7 +25,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {
-  margin: 0; min-height: 100vh;
+  margin: 0; min-height: 100vh; overflow-x: clip; /* nada passa da largura da tela; cada faixa rola sozinha */
   background:
     radial-gradient(1200px 500px at 85% -10%, rgba(255, 92, 53, 0.12), transparent 60%),
     radial-gradient(900px 400px at -10% 10%, rgba(90, 169, 255, 0.08), transparent 60%),
@@ -192,7 +192,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--destaque); 
 .aba[aria-selected='true'] { color: var(--texto); border-bottom-color: var(--destaque); }
 .painel { padding: 28px 0 56px; display: grid; gap: 20px; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); align-items: start; }
 .painel-unico { padding: 28px 0 56px; display: grid; gap: 20px; }
-@media (max-width: 900px) { .painel { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .painel { grid-template-columns: minmax(0, 1fr); } }
 
 .tabela-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
@@ -288,7 +288,9 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 
 /* Layout: faixas + coluna Grátis */
 .vitrine-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; padding-top: 18px; }
-@media (max-width: 1080px) { .vitrine-layout { grid-template-columns: 1fr; } }
+/* minmax(0, 1fr): sem isso a coluna cresce até caber todos os cartões e a página fica mais larga que a tela */
+@media (max-width: 1080px) { .vitrine-layout { grid-template-columns: minmax(0, 1fr); } }
+.principal, .vitrine-layout > *, .faixa { min-width: 0; }
 
 .barra-busca { display: flex; gap: 10px; align-items: center; margin: 6px 0 4px; }
 .barra-busca input {
@@ -403,3 +405,74 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ===== Celular ===== */
+.trilho { touch-action: pan-x pan-y; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+@media (max-width: 640px) {
+  .container { width: calc(100% - 24px); }
+  .billboard { min-height: 380px; }
+  .billboard-conteudo { padding: 32px 0 40px; }
+  .billboard h1 { font-size: 1.9rem; }
+  .billboard .preco-final { font-size: 1.6rem; }
+  .billboard-pontos { right: 12px; bottom: 14px; }
+  .barra-busca { flex-wrap: wrap; }
+  .barra-busca .cotacao { order: -1; }
+  .jogo { width: 220px; }
+  .faixa-destaques .jogo { width: 260px; }
+  .esqueleto { width: 220px; height: 230px; }
+  .loja-bloco { width: 140px; padding: 14px; gap: 8px; }
+  .loja-bloco img { width: 40px; height: 40px; }
+  .loja-bloco h2 { font-size: 1.05rem; }
+  .trilho { gap: 10px; scroll-padding-left: 4px; }
+  .faixa { margin-top: 18px; }
+  /* dica visual de que a faixa continua para o lado */
+  .faixa::after {
+    content: ''; position: absolute; top: 0; right: -12px; bottom: 18px; width: 36px; pointer-events: none;
+    background: linear-gradient(90deg, transparent, var(--fundo));
+  }
+}
+
+/* ===== Rodapé completo ===== */
+.rodape { padding: 36px 0 24px; }
+.rodape-grade { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 24px; }
+@media (max-width: 760px) { .rodape-grade { grid-template-columns: 1fr 1fr; } .rodape-grade > :first-child { grid-column: 1 / -1; } }
+.rodape h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto); margin: 0 0 10px; }
+.rodape nav { display: grid; gap: 8px; align-content: start; }
+.rodape nav a, .link-botao { color: var(--texto-suave); text-decoration: none; font-size: 0.88rem; }
+.rodape nav a:hover, .link-botao:hover { color: var(--texto); text-decoration: underline; }
+.link-botao { background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+.rodape-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 28px; padding-top: 16px; border-top: 1px solid var(--linha); font-size: 0.78rem; }
+
+/* ===== Aviso de cookies ===== */
+.cookies {
+  position: fixed; z-index: 50; left: 50%; bottom: 16px; transform: translateX(-50%);
+  width: min(760px, calc(100% - 24px)); display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;
+  padding: 16px 18px; border-radius: 16px; background: rgba(23, 27, 36, 0.97); border: 1px solid var(--linha);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55); backdrop-filter: blur(10px); animation: subir 0.35s ease both;
+}
+.cookies.saindo { opacity: 0; transform: translate(-50%, 12px); transition: 0.25s; }
+.cookies-texto { flex: 1 1 360px; font-size: 0.86rem; }
+.cookies-texto p { margin: 6px 0 0; color: var(--texto-suave); }
+.cookies-texto a { color: var(--destaque-2); }
+.cookies-opcoes { display: grid; gap: 8px; margin-top: 12px; }
+.cookies-opcao { display: flex; gap: 10px; align-items: flex-start; font-size: 0.84rem; color: var(--texto-suave); }
+.cookies-opcao input { margin-top: 3px; accent-color: var(--destaque); }
+.cookies-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ===== Voltar ao topo ===== */
+.voltar-topo {
+  position: fixed; right: 16px; bottom: 16px; z-index: 40; width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid var(--linha); background: var(--cartao-2); color: var(--texto); font-size: 1.1rem; cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); animation: subir 0.25s ease both;
+}
+.voltar-topo:hover { border-color: var(--destaque); }
+
+/* ===== Páginas de texto (políticas, termos, 404) ===== */
+.texto-legal { max-width: 760px; margin: 40px auto 56px; line-height: 1.65; }
+.texto-legal h1 { font-size: clamp(1.8rem, 4vw, 2.4rem); margin: 0 0 6px; }
+.texto-legal h2 { font-size: 1.2rem; margin: 32px 0 8px; scroll-margin-top: 90px; }
+.texto-legal p, .texto-legal li { color: #c9cfdb; font-size: 0.95rem; }
+.texto-legal a { color: var(--destaque-2); }
+.texto-legal table { margin: 12px 0; }
+.erro-404 { text-align: center; margin: 80px auto; max-width: 520px; }
+.erro-404 .numero { font-family: 'Space Grotesk'; font-size: 6rem; font-weight: 700; line-height: 1; color: var(--destaque); }

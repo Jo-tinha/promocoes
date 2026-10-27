@@ -37,6 +37,10 @@ api/gratis.js               Função do Vercel que busca os jogos grátis da Gam
 src/recomendacoes.js        Coleção "recomendacoes"
 src/usuarios.js             Perfis, "seguindo" e avisos
 src/vitrine.js / entrar.js / notificar.js / admin*.js   Lógica de cada página
+privacidade.html            Política de privacidade e de cookies (LGPD)
+termos.html                 Termos de uso
+404.html                    Página de erro (o Vercel usa automaticamente)
+src/site.js                 Rodapé, aviso de cookies com preferências e botão "voltar ao topo"
 firestore.rules             Regras de segurança
 ```
 

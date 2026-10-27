@@ -7,6 +7,7 @@ import { buscarPromocoes, buscarGratis } from './api.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
 import { ORDEM_LOJAS, varsDaLoja, lojaPelaPlataforma, imagemGrande } from './lojas.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
+import { guardarPreferencia, lerPreferencia } from './site.js';
 
 const $ = (s) => document.querySelector(s);
 const elBillboard = $('#billboard');
@@ -248,6 +249,7 @@ let buscaAtual = 0;
 $('#busca').addEventListener('input', (e) => {
   clearTimeout(espera);
   const termo = e.target.value.trim();
+  guardarPreferencia('busca', termo);
   const faixa = $('#faixa-busca');
   if (termo.length < 2) {
     faixa.hidden = true;
@@ -318,6 +320,11 @@ async function iniciar() {
   $('#cotacao').innerHTML = contexto.cotacao ? `Dólar: <strong>${formatarReal(contexto.cotacao)}</strong>` : 'Preços em dólar';
   estado.lojasPendentes = ORDEM_LOJAS.filter((id) => contexto.lojas.has(id));
   carregarGratis();
+  const ultimaBusca = lerPreferencia('busca');
+  if (ultimaBusca) {
+    $('#busca').value = ultimaBusca;
+    $('#busca').dispatchEvent(new Event('input'));
+  }
   await carregarDestaques();
   carregarMaisLojas();
 }

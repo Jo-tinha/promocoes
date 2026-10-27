@@ -4,6 +4,7 @@ import { auth } from './firebase.js';
 import { ehAdmin, buscarAvisos } from './usuarios.js';
 import { carregarContexto, dolarParaReal } from './contexto.js';
 import { esc } from './util.js';
+import { iniciarSite } from './site.js';
 
 const topo = document.querySelector('#topo');
 
@@ -58,6 +59,7 @@ export async function atualizarSino(uid) {
 // pagina: 'vitrine' | 'notificar' | 'admin' | 'entrar'
 // aoMudar({ usuario, admin }) é chamado sempre que o login muda
 export function iniciarSessao(pagina, aoMudar) {
+  iniciarSite();
   renderizarTopo(null, false, pagina);
   onAuthStateChanged(auth, async (usuario) => {
     const admin = usuario ? await ehAdmin(usuario.uid) : false;
