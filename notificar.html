@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0f14" />
+    <title>Notificar · Buba Promo</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff5c35'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EB%3C/text%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="topo" id="topo"></header>
+
+    <main class="container" id="precisa-login" hidden>
+      <div class="caixa login">
+        <h2>Notificar</h2>
+        <p class="secao-nota">Entre na sua conta para escolher os jogos que você quer acompanhar e receber avisos de promoção.</p>
+        <div class="form-acoes" style="margin-top:16px"><a class="botao" href="/entrar.html">Entrar ou criar conta</a></div>
+      </div>
+    </main>
+
+    <main class="container painel-unico" id="conteudo" hidden>
+      <section class="caixa" id="avisos" aria-labelledby="titulo-avisos">
+        <div class="secao-cabeca">
+          <div>
+            <h2 id="titulo-avisos">Seus avisos</h2>
+            <p class="secao-nota" id="nota-avisos">Carregando…</p>
+          </div>
+          <button class="botao secundario pequeno" type="button" id="marcar-lidos" hidden>Marcar como lidos</button>
+        </div>
+        <div class="lista-linhas" id="lista-avisos"></div>
+      </section>
+
+      <section class="caixa" aria-labelledby="titulo-jogos">
+        <div class="secao-cabeca">
+          <div>
+            <h2 id="titulo-jogos">Escolha seus jogos</h2>
+            <p class="secao-nota" id="nota-jogos">Jogos que já estiveram em oferta no Buba Promo. Marque os que você quer acompanhar.</p>
+          </div>
+        </div>
+        <div class="filtros">
+          <input type="search" id="busca-jogos" placeholder="Buscar jogo" aria-label="Buscar jogo" />
+          <select id="filtro-jogos" aria-label="Mostrar">
+            <option value="todos">Todos os jogos</option>
+            <option value="seguindo">Só os que acompanho</option>
+          </select>
+        </div>
+        <div class="jogos-grade" id="lista-jogos"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/notificar.js"></script>
+  </body>
+</html>

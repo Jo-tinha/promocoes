@@ -3,169 +3,124 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0f14" />
     <meta name="robots" content="noindex" />
     <title>Painel · Buba Promo</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f6f5c'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E%25%3C/text%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff5c35'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EB%3C/text%3E%3C/svg%3E" />
   </head>
   <body>
-    <header class="topo">
-      <div class="container">
-        <a class="marca" href="/">Buba <span>Promo</span></a>
-        <div class="usuario" id="usuario" hidden>
-          <span id="usuario-email"></span>
-          <button class="botao secundario pequeno" id="sair" type="button">Sair</button>
-        </div>
-        <a class="link-discreto" id="voltar" href="/">← Voltar à vitrine</a>
-      </div>
-    </header>
+    <header class="topo" id="topo"></header>
 
-    <!-- Login -->
-    <main id="tela-login" class="container" hidden>
+    <!-- Sem acesso -->
+    <main class="container" id="sem-acesso" hidden>
       <div class="caixa login">
-        <h2>Entrar no painel</h2>
-        <form class="form" id="form-login">
-          <label>E-mail
-            <input type="email" name="email" autocomplete="username" required />
-          </label>
-          <label>Senha
-            <input type="password" name="senha" autocomplete="current-password" required />
-          </label>
-          <p class="mensagem erro" id="erro-login" role="alert"></p>
-          <button class="botao" type="submit">Entrar</button>
-        </form>
+        <h2>Painel do administrador</h2>
+        <div id="sem-acesso-texto" class="secao-nota"></div>
       </div>
     </main>
 
-    <!-- Painel -->
-    <div id="tela-painel" hidden>
+    <div id="painel" hidden>
       <nav class="abas container" role="tablist" aria-label="Seções do painel">
-        <button class="aba" role="tab" data-aba="notificar" aria-selected="true">
-          Inspeção diária <span class="contador" id="contador-novas" hidden></span>
-        </button>
-        <button class="aba" role="tab" data-aba="recomendacoes" aria-selected="false">Recomendações</button>
-        <button class="aba" role="tab" data-aba="ofertas" aria-selected="false">Ofertas oficiais</button>
+        <button class="aba" role="tab" data-aba="averiguar" aria-selected="true">Averiguar promoções</button>
+        <button class="aba" role="tab" data-aba="vitrine" aria-selected="false">Na vitrine <span class="contador" id="qtd-vitrine" hidden></span></button>
+        <button class="aba" role="tab" data-aba="recomendacoes" aria-selected="false">Recomendações diárias</button>
       </nav>
 
-      <!-- Aba: catálogo Notificar + inspeção diária -->
-      <main id="aba-notificar" class="container painel" role="tabpanel">
-        <section class="caixa">
-          <h2 id="titulo-form-alerta">Novo alerta</h2>
-          <p class="secao-nota" style="margin:-8px 0 16px">Cadastre os jogos que você quer vigiar. Na inspeção diária, as promoções novas de cada alerta aparecem destacadas.</p>
-          <form class="form" id="form-alerta" novalidate>
-            <label>Nome do jogo
-              <input name="termo" maxlength="60" placeholder="ex.: hollow knight" required />
-            </label>
-            <label>Preço máximo (R$) <span class="secao-nota">— opcional</span>
-              <input name="precoMaximo" type="number" min="0.01" step="0.01" />
-            </label>
-            <label>Loja
-              <select name="lojaId" id="alerta-loja">
-                <option value="">Qualquer loja</option>
-              </select>
-            </label>
-            <label class="check">
-              <input name="ativo" type="checkbox" checked /> Alerta ativo (entra na inspeção)
-            </label>
-            <p class="mensagem" id="msg-alerta" role="status"></p>
-            <div class="form-acoes">
-              <button class="botao" type="submit" id="salvar-alerta">Cadastrar alerta</button>
-              <button class="botao secundario" type="button" id="cancelar-alerta" hidden>Cancelar edição</button>
-            </div>
-          </form>
-        </section>
-
+      <!-- Averiguar: promoções que chegam da CheapShark -->
+      <main class="container painel-unico" id="aba-averiguar" role="tabpanel">
         <section class="caixa">
           <div class="secao-cabeca">
             <div>
-              <h2 style="margin:0">Inspeção de hoje</h2>
-              <p class="secao-nota" id="status-inspecao">Carregando…</p>
-            </div>
-            <div class="form-acoes">
-              <button class="botao secundario pequeno" type="button" id="atualizar-inspecao">Verificar de novo</button>
-              <button class="botao pequeno" type="button" id="concluir-inspecao" disabled>Concluir inspeção</button>
+              <h2 style="margin:0">Promoções chegando</h2>
+              <p class="secao-nota" id="nota-averiguar">Promoções atuais da CheapShark. Aprove as que devem entrar na vitrine.</p>
             </div>
           </div>
-          <div id="lista-alertas" class="lista-alertas"></div>
+          <form class="filtros" id="filtros-averiguar">
+            <input type="search" name="termo" placeholder="Buscar por título (opcional)" aria-label="Buscar por título" />
+            <select name="loja" id="averiguar-loja" aria-label="Loja"><option value="">Todas as lojas</option></select>
+            <select name="ordem" aria-label="Ordem">
+              <option value="Recent">Chegaram por último</option>
+              <option value="Savings">Maior desconto</option>
+              <option value="Deal Rating">Melhor custo-benefício</option>
+            </select>
+            <label class="secao-nota" style="display:flex;align-items:center;gap:6px">
+              <input type="checkbox" name="soNovas" checked style="width:auto" /> Só as que não estão na vitrine
+            </label>
+            <button class="botao secundario" type="submit">Buscar</button>
+          </form>
+          <div class="lista-linhas" id="lista-averiguar"></div>
         </section>
       </main>
 
-      <!-- Aba: recomendações -->
-      <main id="aba-recomendacoes" class="container painel-unico" role="tabpanel" hidden>
+      <!-- Promoções aprovadas -->
+      <main class="container painel-unico" id="aba-vitrine" role="tabpanel" hidden>
         <section class="caixa">
           <div class="secao-cabeca">
-            <h2 style="margin:0">Recomendações publicadas</h2>
-            <p class="secao-nota" id="contagem-recomendacoes"></p>
+            <div>
+              <h2 style="margin:0">Promoções na vitrine</h2>
+              <p class="secao-nota" id="nota-vitrine"></p>
+            </div>
+            <button class="botao secundario pequeno" type="button" id="atualizar-todas">Atualizar todos os preços</button>
           </div>
-          <p class="secao-nota" style="margin:0 0 12px">Para recomendar uma promoção, use o botão "Recomendar" na inspeção diária.</p>
           <div class="tabela-wrap">
             <table>
               <thead>
-                <tr><th></th><th>Jogo</th><th>Preço</th><th>Comentário</th><th>Ações</th></tr>
+                <tr><th></th><th>Jogo</th><th>Preço</th><th>Aprovada em</th><th>Situação</th><th>Ações</th></tr>
               </thead>
-              <tbody id="lista-recomendacoes"></tbody>
+              <tbody id="lista-vitrine"></tbody>
             </table>
           </div>
         </section>
       </main>
 
-      <!-- Aba: ofertas oficiais -->
-      <main id="aba-ofertas" class="container painel" role="tabpanel" hidden>
+      <!-- Recomendações diárias -->
+      <main class="container painel" id="aba-recomendacoes" role="tabpanel" hidden>
         <section class="caixa">
-          <h2 id="titulo-form">Nova oferta</h2>
-          <form class="form" id="form-oferta" novalidate>
-            <label>Título
-              <input name="titulo" maxlength="80" required />
-            </label>
-            <label>Descrição
-              <textarea name="descricao" maxlength="300"></textarea>
-            </label>
-            <label>Categoria
-              <input name="categoria" list="sugestoes-categoria" maxlength="40" required />
-              <datalist id="sugestoes-categoria">
-                <option value="eletrônicos"></option>
-                <option value="casa"></option>
-                <option value="moda"></option>
-                <option value="beleza"></option>
-                <option value="esporte"></option>
-                <option value="games"></option>
-              </datalist>
-            </label>
+          <h2 id="titulo-form-rec">Nova recomendação</h2>
+          <form class="form" id="form-rec" novalidate>
             <div class="linha2">
-              <label>Preço original (R$)
-                <input name="precoOriginal" type="number" min="0.01" step="0.01" required />
+              <label>Tipo
+                <select name="tipo">
+                  <option value="jogo">Jogo</option>
+                  <option value="noticia">Notícia</option>
+                  <option value="evento">Evento</option>
+                </select>
               </label>
-              <label>Preço da oferta (R$)
-                <input name="precoOferta" type="number" min="0.01" step="0.01" required />
+              <label>Dia
+                <input name="data" type="date" required />
               </label>
             </div>
-            <label>Link da imagem
-              <input name="imagemUrl" type="url" placeholder="https://…" />
+            <label>Título
+              <input name="titulo" maxlength="90" required />
             </label>
-            <label>Válida até
-              <input name="validoAte" type="date" />
+            <label>Descrição
+              <textarea name="descricao" maxlength="280" placeholder="Por que vale a pena?"></textarea>
             </label>
-            <label class="check">
-              <input name="ativa" type="checkbox" checked /> Oferta ativa (aparece na vitrine)
+            <label>Link
+              <input name="link" type="url" placeholder="https://… (loja, notícia, página do evento)" required />
             </label>
-            <p class="mensagem" id="msg-form" role="status"></p>
+            <label>Imagem <span class="secao-nota">— link opcional</span>
+              <input name="imagem" type="url" placeholder="https://…" />
+            </label>
+            <p class="mensagem" id="msg-rec" role="status"></p>
             <div class="form-acoes">
-              <button class="botao" type="submit" id="botao-salvar">Cadastrar oferta</button>
-              <button class="botao secundario" type="button" id="cancelar" hidden>Cancelar edição</button>
+              <button class="botao" type="submit" id="salvar-rec">Publicar recomendação</button>
+              <button class="botao secundario" type="button" id="cancelar-rec" hidden>Cancelar edição</button>
             </div>
           </form>
         </section>
 
         <section class="caixa">
           <div class="secao-cabeca">
-            <h2 style="margin:0">Ofertas cadastradas</h2>
-            <p class="secao-nota" id="contagem"></p>
+            <h2 style="margin:0">Catálogo de recomendações</h2>
+            <p class="secao-nota" id="nota-recs"></p>
           </div>
           <div class="tabela-wrap">
             <table>
               <thead>
-                <tr><th></th><th>Oferta</th><th>Preço</th><th>Validade</th><th>Status</th><th>Ações</th></tr>
+                <tr><th>Dia</th><th>Tipo</th><th>Título</th><th>Ações</th></tr>
               </thead>
-              <tbody id="lista-ofertas"></tbody>
+              <tbody id="lista-recs"></tbody>
             </table>
           </div>
         </section>

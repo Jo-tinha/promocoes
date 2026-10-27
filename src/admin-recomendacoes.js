@@ -1,62 +1,132 @@
-// Aba "Recomendações": consultar, editar o comentário e excluir as recomendações publicadas
-import { listarRecomendacoes, atualizarComentario, excluirRecomendacao } from './recomendacoes.js';
-import { precoEmReal, nomeDaLoja } from './contexto.js';
-import { esc, IMAGEM_PADRAO } from './util.js';
+// Aba "Recomendações diárias": CRUD do catálogo (jogos, notícias e eventos gamer)
+import {
+  TIPOS,
+  criarRecomendacao,
+  listarRecomendacoes,
+  atualizarRecomendacao,
+  excluirRecomendacao,
+  validarRecomendacao,
+} from './recomendacoes.js';
+import { esc, hojeISO, formatarDiaISO } from './util.js';
 
-const lista = document.querySelector('#lista-recomendacoes');
-const contagem = document.querySelector('#contagem-recomendacoes');
+const form = document.querySelector('#form-rec');
+const tituloForm = document.querySelector('#titulo-form-rec');
+const msg = document.querySelector('#msg-rec');
+const botaoSalvar = document.querySelector('#salvar-rec');
+const botaoCancelar = document.querySelector('#cancelar-rec');
+const lista = document.querySelector('#lista-recs');
+const nota = document.querySelector('#nota-recs');
 
-let recomendacoes = [];
+let recs = [];
+let editandoId = null;
+
+function mostrar(texto, tipo = '') {
+  msg.textContent = texto;
+  msg.className = `mensagem ${tipo}`;
+}
+
+function modoCadastro() {
+  editandoId = null;
+  form.reset();
+  form.elements.data.value = hojeISO();
+  tituloForm.textContent = 'Nova recomendação';
+  botaoSalvar.textContent = 'Publicar recomendação';
+  botaoCancelar.hidden = true;
+}
+
+function modoEdicao(r) {
+  editandoId = r.id;
+  ['tipo', 'titulo', 'descricao', 'link', 'imagem', 'data'].forEach((c) => (form.elements[c].value = r[c] || ''));
+  tituloForm.textContent = 'Editar recomendação';
+  botaoSalvar.textContent = 'Salvar alterações';
+  botaoCancelar.hidden = false;
+  mostrar('');
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 function linha(r) {
+  const hoje = r.data === hojeISO();
   return `
     <tr>
-      <td><img class="miniatura larga" src="${esc(r.imagem)}" alt="" onerror="this.src='${IMAGEM_PADRAO}'" /></td>
-      <td><strong>${esc(r.titulo)}</strong><br /><span class="secao-nota">${esc(nomeDaLoja(r.lojaId))} · -${r.desconto}%</span></td>
-      <td><span class="preco-antigo">${precoEmReal(r.precoNormal)}</span><br />${precoEmReal(r.precoPromocional)}</td>
-      <td class="comentario">${r.comentario ? esc(r.comentario) : '<span class="secao-nota">sem comentário</span>'}</td>
+      <td>${formatarDiaISO(r.data)}${hoje ? ' <span class="status ok">hoje</span>' : ''}</td>
+      <td><span class="tipo tipo-${esc(r.tipo)}">${esc(TIPOS[r.tipo] || r.tipo)}</span></td>
+      <td><a href="${esc(r.link)}" target="_blank" rel="noopener"><strong>${esc(r.titulo)}</strong></a>
+          ${r.descricao ? `<br /><span class="secao-nota">${esc(r.descricao)}</span>` : ''}</td>
       <td>
         <div class="acoes-linha">
-          <a class="botao secundario pequeno" href="${esc(r.link)}" target="_blank" rel="noopener">Abrir</a>
-          <button class="botao secundario pequeno" data-acao="comentar" data-id="${r.id}">Editar comentário</button>
-          <button class="botao perigo pequeno" data-acao="excluir" data-id="${r.id}">Excluir</button>
+          <button class="botao secundario pequeno" type="button" data-editar="${esc(r.id)}">Editar</button>
+          <button class="botao perigo pequeno" type="button" data-excluir="${esc(r.id)}">Excluir</button>
         </div>
       </td>
     </tr>`;
 }
 
-export async function carregarRecomendacoes() {
+export async function carregarRecomendacoesAdmin() {
   try {
-    recomendacoes = await listarRecomendacoes();
-    contagem.textContent = `${recomendacoes.length} ${recomendacoes.length === 1 ? 'recomendação' : 'recomendações'}`;
-    lista.innerHTML = recomendacoes.length
-      ? recomendacoes.map(linha).join('')
-      : '<tr><td colspan="5">Nenhuma recomendação ainda.</td></tr>';
+    recs = await listarRecomendacoes(100);
+    const deHoje = recs.filter((r) => r.data === hojeISO()).length;
+    nota.textContent = `${deHoje} para hoje · ${recs.length} no catálogo`;
+    lista.innerHTML = recs.length
+      ? recs.map(linha).join('')
+      : '<tr><td colspan="4">Nenhuma recomendação ainda. Publique a primeira ao lado.</td></tr>';
   } catch (erro) {
     console.error(erro);
-    lista.innerHTML = '<tr><td colspan="5" class="mensagem erro">Erro ao carregar as recomendações.</td></tr>';
+    lista.innerHTML = '<tr><td colspan="4" class="mensagem erro">Erro ao carregar o catálogo.</td></tr>';
   }
 }
 
-export function iniciarRecomendacoes() {
-  lista.addEventListener('click', async (e) => {
-    const botao = e.target.closest('button[data-acao]');
-    if (!botao) return;
-    const rec = recomendacoes.find((r) => r.id === botao.dataset.id);
-    if (!rec) return;
+export function iniciarRecomendacoesAdmin() {
+  modoCadastro();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const dados = Object.fromEntries(['tipo', 'titulo', 'descricao', 'link', 'imagem', 'data'].map((c) => [c, form.elements[c].value]));
+    const erros = validarRecomendacao(dados);
+    if (erros.length) {
+      mostrar(erros.join(' '), 'erro');
+      return;
+    }
+    botaoSalvar.disabled = true;
     try {
-      if (botao.dataset.acao === 'comentar') {
-        const novo = prompt('Por que você recomenda essa promoção?', rec.comentario || '');
-        if (novo === null) return;
-        await atualizarComentario(rec.id, novo.slice(0, 200));
-      } else if (botao.dataset.acao === 'excluir') {
-        if (!confirm(`Remover "${rec.titulo}" das recomendações?`)) return;
-        await excluirRecomendacao(rec.id);
+      if (editandoId) {
+        await atualizarRecomendacao(editandoId, dados);
+        mostrar('Recomendação atualizada.', 'ok');
+      } else {
+        await criarRecomendacao(dados);
+        mostrar('Recomendação publicada.', 'ok');
       }
-      await carregarRecomendacoes();
+      modoCadastro();
+      await carregarRecomendacoesAdmin();
     } catch (erro) {
       console.error(erro);
-      alert('Não foi possível concluir a ação. Tente novamente.');
+      mostrar('Não foi possível salvar. Confira se sua conta está na coleção "admins".', 'erro');
+    } finally {
+      botaoSalvar.disabled = false;
+    }
+  });
+
+  botaoCancelar.addEventListener('click', () => {
+    modoCadastro();
+    mostrar('');
+  });
+
+  lista.addEventListener('click', async (e) => {
+    const botao = e.target.closest('[data-editar], [data-excluir]');
+    if (!botao) return;
+    const r = recs.find((x) => x.id === (botao.dataset.editar || botao.dataset.excluir));
+    if (!r) return;
+    if (botao.dataset.editar) {
+      modoEdicao(r);
+      return;
+    }
+    if (!confirm(`Excluir "${r.titulo}" do catálogo?`)) return;
+    try {
+      await excluirRecomendacao(r.id);
+      if (editandoId === r.id) modoCadastro();
+      await carregarRecomendacoesAdmin();
+    } catch (erro) {
+      console.error(erro);
+      alert('Não foi possível excluir. Tente novamente.');
     }
   });
 }

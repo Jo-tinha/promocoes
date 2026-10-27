@@ -1,153 +1,200 @@
 import './style.css';
-import { listarOfertas, ofertaVigente } from './ofertas.js';
-import { listarRecomendacoes } from './recomendacoes.js';
-import { firebaseConfigurado } from './firebase.js';
-import { buscarPromocoes } from './api.js';
+import { iniciarSessao, atualizarSino } from './sessao.js';
+import { listarPromocoes } from './promocoes.js';
+import { listarRecomendacoes, TIPOS } from './recomendacoes.js';
+import { listarSeguindo, seguirJogo, deixarDeSeguir } from './usuarios.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja, iconeDaLoja } from './contexto.js';
-import { formatarReal, percentualDesconto, esc, formatarData, IMAGEM_PADRAO } from './util.js';
+import { formatarReal, esc, hojeISO, formatarDiaISO, IMAGEM_PADRAO } from './util.js';
 
-const gradeOficiais = document.querySelector('#grade-oficiais');
-const gradeRecomendacoes = document.querySelector('#grade-recomendacoes');
-const gradeCatalogo = document.querySelector('#grade-catalogo');
+const elLojas = document.querySelector('#lojas');
+const elGrade = document.querySelector('#grade');
+const elBusca = document.querySelector('#busca');
+const elOrdem = document.querySelector('#ordem');
 const elCotacao = document.querySelector('#cotacao');
-const campoBusca = document.querySelector('#busca');
-const campoLoja = document.querySelector('#loja');
+const elChamada = document.querySelector('#chamada');
+const secRecs = document.querySelector('#sec-recomendacoes');
+const gradeRecs = document.querySelector('#grade-recomendacoes');
+const notaRecs = document.querySelector('#nota-recomendacoes');
 
-const AVISO_FIREBASE = '<div class="aviso erro">Firebase não configurado. Preencha as variáveis de ambiente (veja o README).</div>';
+const estado = {
+  promocoes: [],
+  carregou: false,
+  lojaAtiva: '', // '' = todas
+  usuario: null,
+  seguindo: new Set(), // gameIDs seguidos pelo usuário logado
+};
 
-// ---------- Ofertas oficiais (Firestore) ----------
-function cartaoOficial(o) {
-  const desconto = percentualDesconto(o.precoOriginal, o.precoOferta);
-  return `
-    <article class="cartao">
-      <div class="cartao-imagem">
-        <img src="${esc(o.imagemUrl) || IMAGEM_PADRAO}" alt="${esc(o.titulo)}" loading="lazy"
-             onerror="this.src='${IMAGEM_PADRAO}'" />
-        <span class="selo oficial">Oficial</span>
-        <span class="selo selo-desconto">-${desconto}%</span>
-      </div>
-      <div class="cartao-corpo">
-        <span class="categoria">${esc(o.categoria)}</span>
-        <h3>${esc(o.titulo)}</h3>
-        <p class="descricao">${esc(o.descricao)}</p>
-        <div class="precos">
-          <span class="preco-antigo">${formatarReal(o.precoOriginal)}</span>
-          <span class="preco-final">${formatarReal(o.precoOferta)}</span>
-        </div>
-        <span class="validade">Válida até ${formatarData(o.validoAte?.toDate())}</span>
-      </div>
-    </article>`;
+// ---------- Vitrine por loja ----------
+function renderizarLojas() {
+  const contagem = new Map();
+  estado.promocoes.forEach((p) => contagem.set(p.lojaId, (contagem.get(p.lojaId) || 0) + 1));
+  const lojas = [...contagem.entries()].sort((a, b) => b[1] - a[1]);
+  const chip = (id, nome, qtd, icone) => `
+    <button class="chip" type="button" data-loja="${esc(id)}" aria-pressed="${estado.lojaAtiva === id}">
+      ${icone ? `<img src="${esc(icone)}" alt="" />` : ''}${esc(nome)} <span class="qtd">${qtd}</span>
+    </button>`;
+  elLojas.innerHTML =
+    chip('', 'Todas', estado.promocoes.length, '') +
+    lojas.map(([id, qtd]) => chip(id, nomeDaLoja(id), qtd, iconeDaLoja(id))).join('');
 }
 
-async function carregarOficiais() {
-  if (!firebaseConfigurado) {
-    gradeOficiais.innerHTML = AVISO_FIREBASE;
-    return;
-  }
-  try {
-    const ofertas = (await listarOfertas()).filter(ofertaVigente);
-    gradeOficiais.innerHTML = ofertas.length
-      ? ofertas.map(cartaoOficial).join('')
-      : '<div class="aviso">Nenhuma oferta oficial no momento. Volte em breve!</div>';
-  } catch (erro) {
-    console.error(erro);
-    gradeOficiais.innerHTML = '<div class="aviso erro">Não foi possível carregar as ofertas oficiais.</div>';
-  }
+function botaoSeguir(p) {
+  if (!estado.usuario) return '';
+  const segue = estado.seguindo.has(p.gameID);
+  return `<button class="botao ${segue ? 'sucesso' : 'secundario'} pequeno" type="button" data-seguir="${esc(p.gameID)}"
+            title="${segue ? 'Você recebe avisos deste jogo' : 'Receber aviso quando este jogo entrar em promoção'}">
+            ${segue ? '✓ Notificando' : '🔔 Notificar'}</button>`;
 }
 
-// ---------- Cartão de promoção (usado nas recomendações e nas promoções da API) ----------
-function cartaoPromocao(p, comentario = null) {
+function cartao(p) {
   const icone = iconeDaLoja(p.lojaId);
   return `
-    <a class="cartao cartao-link" href="${esc(p.link)}" target="_blank" rel="noopener sponsored">
-      <div class="cartao-imagem imagem-jogo">
-        <img src="${esc(p.imagem)}" alt="${esc(p.titulo)}" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
-        ${comentario !== null ? '<span class="selo">Recomendado</span>' : ''}
+    <article class="cartao">
+      <a class="cartao-imagem" href="${esc(p.link)}" target="_blank" rel="noopener sponsored" tabindex="-1">
+        <img src="${esc(p.imagem)}" alt="" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
         ${p.desconto >= 1 ? `<span class="selo selo-desconto">-${p.desconto}%</span>` : ''}
-      </div>
+      </a>
       <div class="cartao-corpo">
-        <span class="categoria loja">
-          ${icone ? `<img src="${esc(icone)}" alt="" width="16" height="16" />` : ''}${esc(nomeDaLoja(p.lojaId))}
-        </span>
+        <span class="categoria">${icone ? `<img src="${esc(icone)}" alt="" />` : ''}${esc(nomeDaLoja(p.lojaId))}</span>
         <h3>${esc(p.titulo)}</h3>
-        ${comentario ? `<p class="comentario-admin">“${esc(comentario)}”</p>` : ''}
-        ${!comentario && p.avaliacao ? `<p class="descricao">Steam: ${esc(p.avaliacao)}</p>` : ''}
         <div class="precos">
           ${p.desconto >= 1 ? `<span class="preco-antigo">${precoEmReal(p.precoNormal)}</span>` : ''}
           <span class="preco-final">${precoEmReal(p.precoPromocional)}</span>
         </div>
-        <span class="validade">${comentario !== null ? 'Preço quando recomendado · ' : ''}Ver na loja →</span>
+        <div class="cartao-rodape">
+          <a href="${esc(p.link)}" target="_blank" rel="noopener sponsored">Ver na loja →</a>
+          ${botaoSeguir(p)}
+        </div>
       </div>
-    </a>`;
+    </article>`;
 }
 
-// ---------- Recomendações (Firestore, escolhidas pelo admin) ----------
+const ORDENS = {
+  recentes: (a, b) => (b.aprovadoEm?.toMillis() ?? 0) - (a.aprovadoEm?.toMillis() ?? 0),
+  desconto: (a, b) => b.desconto - a.desconto,
+  preco: (a, b) => a.precoPromocional - b.precoPromocional,
+};
+
+function renderizarGrade() {
+  if (!estado.carregou) return;
+  const termo = elBusca.value.trim().toLowerCase();
+  const lista = estado.promocoes
+    .filter((p) => !estado.lojaAtiva || p.lojaId === estado.lojaAtiva)
+    .filter((p) => !termo || p.titulo.toLowerCase().includes(termo))
+    .sort(ORDENS[elOrdem.value]);
+  elGrade.innerHTML = lista.length
+    ? lista.map(cartao).join('')
+    : `<div class="aviso">${
+        estado.promocoes.length ? 'Nenhuma promoção encontrada com esse filtro.' : 'Nenhuma promoção na vitrine ainda. Volte em breve!'
+      }</div>`;
+}
+
+async function carregarVitrine() {
+  try {
+    await carregarContexto();
+    // promoções que já terminaram (admin atualizou o preço) não aparecem para o público
+    estado.promocoes = (await listarPromocoes()).filter((p) => p.precoPromocional < p.precoNormal);
+    estado.carregou = true;
+    renderizarLojas();
+    renderizarGrade();
+  } catch (erro) {
+    console.error(erro);
+    elGrade.innerHTML = '<div class="aviso erro">Não foi possível carregar a vitrine. Tente recarregar a página.</div>';
+  }
+}
+
+// ---------- Recomendações do dia (só para quem está logado) ----------
+function cartaoRecomendacao(r) {
+  const imagem = r.imagem
+    ? `<img src="${esc(r.imagem)}" alt="" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />`
+    : `<div class="rec-sem-imagem">${esc(TIPOS[r.tipo] || '')}</div>`;
+  return `
+    <article class="cartao">
+      <a class="cartao-imagem" href="${esc(r.link)}" target="_blank" rel="noopener" tabindex="-1">${imagem}</a>
+      <div class="cartao-corpo">
+        <span class="tipo tipo-${esc(r.tipo)}">${esc(TIPOS[r.tipo] || r.tipo)}</span>
+        <h3>${esc(r.titulo)}</h3>
+        ${r.descricao ? `<p class="descricao">${esc(r.descricao)}</p>` : ''}
+        <div class="cartao-rodape">
+          <a href="${esc(r.link)}" target="_blank" rel="noopener">Abrir →</a>
+          <span class="secao-nota">${formatarDiaISO(r.data)}</span>
+        </div>
+      </div>
+    </article>`;
+}
+
 async function carregarRecomendacoes() {
-  if (!firebaseConfigurado) {
-    gradeRecomendacoes.innerHTML = AVISO_FIREBASE;
-    return;
-  }
   try {
-    const lista = await listarRecomendacoes();
-    gradeRecomendacoes.innerHTML = lista.length
-      ? lista.map((r) => cartaoPromocao({ ...r, id: r.dealID }, r.comentario || '')).join('')
-      : '<div class="aviso">Ainda não há recomendações. Volte em breve!</div>';
+    const todas = await listarRecomendacoes(30);
+    const hoje = hojeISO();
+    const deHoje = todas.filter((r) => r.data === hoje);
+    const lista = deHoje.length ? deHoje : todas.filter((r) => r.data < hoje).slice(0, 6);
+    notaRecs.textContent = deHoje.length
+      ? 'Jogos, notícias e eventos escolhidos pela equipe para hoje'
+      : 'Ainda não há recomendações para hoje — estas são as mais recentes';
+    gradeRecs.innerHTML = lista.length
+      ? lista.map(cartaoRecomendacao).join('')
+      : '<div class="aviso">Nenhuma recomendação publicada ainda.</div>';
   } catch (erro) {
     console.error(erro);
-    gradeRecomendacoes.innerHTML = '<div class="aviso erro">Não foi possível carregar as recomendações.</div>';
+    gradeRecs.innerHTML = '<div class="aviso erro">Não foi possível carregar as recomendações.</div>';
   }
 }
 
-// ---------- Promoções nas lojas (CheapShark) ----------
-let requisicaoAtual = 0;
-async function carregarPromocoes() {
-  const id = ++requisicaoAtual; // ignora respostas antigas se o usuário digitar rápido
-  gradeCatalogo.classList.add('carregando');
+// ---------- Eventos ----------
+elLojas.addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-loja]');
+  if (!chip) return;
+  estado.lojaAtiva = chip.dataset.loja;
+  renderizarLojas();
+  renderizarGrade();
+});
+elBusca.addEventListener('input', renderizarGrade);
+elOrdem.addEventListener('change', renderizarGrade);
+
+elGrade.addEventListener('click', async (e) => {
+  const botao = e.target.closest('[data-seguir]');
+  if (!botao || !estado.usuario) return;
+  const gameID = botao.dataset.seguir;
+  const promo = estado.promocoes.find((p) => p.gameID === gameID);
+  botao.disabled = true;
   try {
-    const promocoes = await buscarPromocoes({ termo: campoBusca.value.trim(), lojaId: campoLoja.value });
-    if (id !== requisicaoAtual) return;
-    gradeCatalogo.innerHTML = promocoes.length
-      ? promocoes.map((p) => cartaoPromocao(p)).join('')
-      : '<div class="aviso">Nenhuma promoção encontrada para essa busca.</div>';
-  } catch (erro) {
-    console.error(erro);
-    if (id === requisicaoAtual) {
-      gradeCatalogo.innerHTML = '<div class="aviso erro">Não foi possível carregar as promoções agora. Tente recarregar a página.</div>';
+    if (estado.seguindo.has(gameID)) {
+      await deixarDeSeguir(estado.usuario.uid, gameID);
+      estado.seguindo.delete(gameID);
+    } else {
+      await seguirJogo(estado.usuario.uid, promo);
+      estado.seguindo.add(gameID);
     }
-  } finally {
-    if (id === requisicaoAtual) gradeCatalogo.classList.remove('carregando');
+    renderizarGrade();
+    atualizarSino(estado.usuario.uid);
+  } catch (erro) {
+    console.error(erro);
+    alert('Não foi possível atualizar seus avisos. Tente novamente.');
+    botao.disabled = false;
   }
-}
-
-function mostrarContexto() {
-  if (contexto.cotacao) {
-    const hora = contexto.atualizadoEm ? ` · ${contexto.atualizadoEm.slice(11, 16)}` : '';
-    elCotacao.innerHTML = `Dólar hoje: <strong>${formatarReal(contexto.cotacao)}</strong><span>${hora}</span>`;
-  } else {
-    elCotacao.textContent = 'Cotação indisponível: preços das promoções exibidos em dólar.';
-  }
-  campoLoja.insertAdjacentHTML(
-    'beforeend',
-    [...contexto.lojas.values()].map((l) => `<option value="${esc(l.id)}">${esc(l.nome)}</option>`).join(''),
-  );
-}
-
-// Busca com pequena espera para não chamar a API a cada tecla
-let espera;
-campoBusca.addEventListener('input', () => {
-  clearTimeout(espera);
-  espera = setTimeout(carregarPromocoes, 400);
-});
-campoLoja.addEventListener('change', carregarPromocoes);
-document.querySelector('#filtros').addEventListener('submit', (e) => {
-  e.preventDefault();
-  carregarPromocoes();
 });
 
-// Ofertas oficiais carregam em paralelo; recomendações e promoções esperam a cotação e as lojas
-carregarOficiais();
+// ---------- Início ----------
 carregarContexto().then(() => {
-  mostrarContexto();
-  carregarRecomendacoes();
-  carregarPromocoes();
+  elCotacao.innerHTML = contexto.cotacao
+    ? `Dólar hoje: <strong>${formatarReal(contexto.cotacao)}</strong>`
+    : 'Cotação indisponível: preços exibidos em dólar.';
+});
+carregarVitrine();
+
+iniciarSessao('vitrine', async ({ usuario }) => {
+  estado.usuario = usuario;
+  elChamada.hidden = Boolean(usuario);
+  secRecs.hidden = !usuario;
+  estado.seguindo = new Set();
+  if (usuario) {
+    carregarRecomendacoes();
+    try {
+      estado.seguindo = new Set((await listarSeguindo(usuario.uid)).map((s) => s.gameID));
+    } catch (erro) {
+      console.error(erro);
+    }
+  }
+  renderizarGrade();
 });
