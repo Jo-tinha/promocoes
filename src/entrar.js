@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   sendPasswordResetEmail,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { auth } from './firebase.js';
 import { iniciarSessao } from './sessao.js';
@@ -62,6 +63,7 @@ form.addEventListener('submit', async (e) => {
       const nome = form.elements.nome.value.trim() || email.split('@')[0];
       const { user } = await createUserWithEmailAndPassword(auth, email, senha);
       await updateProfile(user, { displayName: nome });
+      await sendEmailVerification(user).catch(() => {}); // confirma que o e-mail é seu (exigido para admins)
       await criarPerfil(user.uid, { nome, email });
     } else {
       await signInWithEmailAndPassword(auth, email, senha);

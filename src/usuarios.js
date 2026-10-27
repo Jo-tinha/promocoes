@@ -12,12 +12,24 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase.js';
+import { emailEhAdmin, EMAILS_ADMIN } from './admins.js';
 import { buscarOfertasDosJogos } from './api.js';
 
-// Admin = existe um documento admins/{uid}, criado à mão no console do Firebase
-export async function ehAdmin(uid) {
+// Admin = e-mail verificado na lista de src/admins.js, ou documento admins/{uid} criado no console
+export async function ehAdmin(usuario) {
+  // e-mail de admin ainda não verificado: recarrega o usuário (pode ter acabado de clicar no link)
+  // e renova o token, para as regras do Firestore também enxergarem a verificação
+  if (!usuario.emailVerified && EMAILS_ADMIN.includes(String(usuario.email).toLowerCase())) {
+    try {
+      await usuario.reload();
+      if (usuario.emailVerified) await usuario.getIdToken(true);
+    } catch {
+      /* sem rede: segue com o estado atual */
+    }
+  }
+  if (emailEhAdmin(usuario)) return true;
   try {
-    return (await getDoc(doc(db, 'admins', uid))).exists();
+    return (await getDoc(doc(db, 'admins', usuario.uid))).exists();
   } catch {
     return false;
   }

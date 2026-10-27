@@ -67,7 +67,7 @@ Na página Notificar, o usuário marca os jogos que quer acompanhar (lista = jog
 
 1. **Authentication → Sign-in method**: ative **E-mail/senha** e **Google**.
 2. **Firestore Database**: crie o banco (modo produção) → aba **Regras** → cole o conteúdo de `firestore.rules` → **Publicar**.
-3. **Tornar-se admin**: crie sua conta no site (página Entrar) e abra `/admin.html` — a página mostra o seu UID. No Firestore, crie a coleção `admins` com um documento cujo **ID é esse UID** (pode ter um campo qualquer, como `nome`). Recarregue o painel.
+3. **Admins**: `bedimjoaovictor@gmail.com` e `bobapromo@gmail.com` (lista em `src/admins.js` e na função `admin()` de `firestore.rules` — mude nos dois lugares). Só vale com **e-mail verificado**: entrar com o Google já conta; contas com senha recebem um link de verificação no cadastro (o painel tem botão para reenviar). Também dá para liberar outra conta criando no Firestore o documento `admins/{UID}` (o painel mostra o UID).
 4. Depois do deploy, em **Authentication → Settings → Authorized domains**, adicione `seu-projeto.vercel.app`.
 
 A configuração do app web já está em `src/firebase.js`; não é preciso cadastrar variáveis de ambiente. (Essa chave não é secreta: quem protege os dados são as regras do Firestore.)

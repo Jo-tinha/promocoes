@@ -5,9 +5,14 @@ service cloud.firestore {
     function logado() {
       return request.auth != null;
     }
-    // Admin = existe admins/{uid}. Crie esse documento à mão no console do Firebase.
+    // Admin = e-mail VERIFICADO desta lista (a mesma de src/admins.js)
+    // ou um documento admins/{uid} criado à mão no console do Firebase.
     function admin() {
-      return logado() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return logado() && (
+        (request.auth.token.email_verified == true
+          && request.auth.token.email in ['bedimjoaovictor@gmail.com', 'bobapromo@gmail.com'])
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
 
     // Destaques escolhidos a dedo: a vitrine é pública; só o admin destaca, atualiza e remove

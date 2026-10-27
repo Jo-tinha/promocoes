@@ -66,7 +66,7 @@ export function iniciarSessao(pagina, aoMudar) {
   prepararNotificacoes();
   renderizarTopo(null, false, pagina);
   onAuthStateChanged(auth, async (usuario) => {
-    const admin = usuario ? await ehAdmin(usuario.uid) : false;
+    const admin = usuario ? await ehAdmin(usuario) : false;
     renderizarTopo(usuario, admin, pagina);
     aoMudar?.({ usuario, admin });
     clearInterval(checagem);
