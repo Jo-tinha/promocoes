@@ -3,10 +3,11 @@ import { iniciarSessao } from './sessao.js';
 import { listarDestaques } from './destaques.js';
 import { listarRecomendacoes, TIPOS } from './recomendacoes.js';
 import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela } from './estrela.js';
-import { cartaoJogo as cartaoBase, pilulaLoja, metas, precos, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
+import { cartaoJogo as cartaoBase, cartaoAgrupado, agruparPorJogo, pilulaLoja, metas, precos, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
+import { abrirEscolha } from './escolher-loja.js';
 import { salvarNoCatalogo } from './catalogo.js';
 import { buscarPromocoes, buscarGratis } from './api.js';
-import { contexto, carregarContexto, nomeDaLoja } from './contexto.js';
+import { contexto, carregarContexto, nomeDaLoja, precoEmReal } from './contexto.js';
 import { ORDEM_LOJAS, varsDaLoja, imgJogo } from './lojas.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
 
@@ -31,9 +32,19 @@ const LOJAS_POR_VEZ = 6;
 // Guarda cada promoção exibida e salva no catálogo "Games" (só com usuário logado)
 function cartaoJogo(p, opcoes) {
   estado.promos.set(p.dealID, p);
+  if (p.agrupado) {
+    p.ofertas.forEach((o) => {
+      estado.promos.set(o.dealID, o);
+      if (o.gameID) salvarDepois(o);
+    });
+    return cartaoAgrupado(p, opcoes);
+  }
   if (p.gameID) salvarDepois(p);
   return cartaoBase(p, opcoes);
 }
+
+// Faixas que misturam lojas (Destaques, Grátis): o mesmo jogo em várias lojas vira um cartão só
+const cartoesAgrupados = (lista) => agruparPorJogo(lista).map((item, i) => cartaoJogo(item, { especial: true, i })).join('');
 
 let filaCatalogo = [];
 let timerCatalogo;
@@ -72,6 +83,7 @@ function renderizarBillboard(itens) {
     atual = n;
     const p = itens[n];
     estado.promos.set(p.dealID, p);
+    if (p.agrupado) p.ofertas.forEach((o) => estado.promos.set(o.dealID, o));
     elBillboard.classList.remove('vazio');
     elBillboard.setAttribute('style', varsDaLoja(p.lojaId));
     elBillboard.innerHTML = `
@@ -79,15 +91,23 @@ function renderizarBillboard(itens) {
       <div class="container billboard-conteudo" key="${n}">
         <div class="billboard-rotulo">
           <span class="selo-tipo">${p.comentario !== undefined ? 'Destaque' : 'Em alta'}</span>
-          ${pilulaLoja(p.lojaId)}
-          ${p.desconto >= 1 ? `<span class="desconto" style="position:static">-${p.desconto}%</span>` : ''}
+          ${p.agrupado ? `<span class="pilula-loja">${p.ofertas.length} lojas</span>` : pilulaLoja(p.lojaId)}
+          ${p.agrupado ? (p.maiorDesconto >= 1 ? `<span class="desconto" style="position:static">até -${p.maiorDesconto}%</span>` : '') : p.desconto >= 1 ? `<span class="desconto" style="position:static">-${p.desconto}%</span>` : ''}
         </div>
         <h1>${esc(p.titulo)}</h1>
         ${p.comentario ? `<p>${esc(p.comentario)}</p>` : ''}
         ${metas(p)}
-        ${precos(p)}
+        ${
+          p.agrupado
+            ? `<div class="precos"><span class="preco-legenda">média</span><span class="preco-final">${precoEmReal(p.precoMedio)}</span><span class="preco-de">a partir de ${precoEmReal(p.menorPreco)}</span></div>`
+            : precos(p)
+        }
         <div class="billboard-acoes">
-          <a class="botao" href="${esc(p.link)}" target="_blank" rel="noopener sponsored">Ver na loja</a>
+          ${
+            p.agrupado
+              ? `<button class="botao" type="button" data-escolher="${esc(p.dealID)}">Escolher loja (${p.ofertas.length})</button>`
+              : `<a class="botao" href="${esc(p.link)}" target="_blank" rel="noopener sponsored">Ver na loja</a>`
+          }
           ${botaoEstrela(p, { grande: true })}
         </div>
       </div>
@@ -120,8 +140,9 @@ async function carregarDestaques() {
     console.error(erro);
   }
   if (destaques.length) {
-    trilho.innerHTML = destaques.map((p, i) => cartaoJogo(p, { especial: true, i })).join('');
-    renderizarBillboard(destaques.slice(0, 5));
+    const itens = agruparPorJogo(destaques);
+    trilho.innerHTML = cartoesAgrupados(destaques);
+    renderizarBillboard(itens.slice(0, 5));
   } else {
     $('#faixa-destaques').hidden = true;
     // Sem destaques ainda: o banner mostra as melhores promoções do momento
@@ -184,7 +205,7 @@ async function carregarGratis() {
   try {
     const jogos = await buscarGratis();
     if (!jogos.length) return ($('#faixa-gratis').hidden = true);
-    trilho.innerHTML = jogos.map((p, i) => cartaoJogo(p, { especial: true, i })).join('');
+    trilho.innerHTML = cartoesAgrupados(jogos);
   } catch (erro) {
     console.error(erro);
     $('#faixa-gratis').hidden = true;
@@ -222,6 +243,12 @@ function renderizarAtalhos() {
 // ---------- Interações ----------
 ativarSetas();
 ativarEstrelas();
+document.addEventListener('click', (e) => {
+  const alvo = e.target.closest('[data-escolher]');
+  if (!alvo || e.target.closest('[data-estrela]')) return;
+  const grupo = estado.promos.get(alvo.dataset.escolher);
+  if (grupo?.agrupado) abrirEscolha(grupo);
+});
 botaoMaisLojas.addEventListener('click', carregarMaisLojas);
 
 // ---------- Início ----------

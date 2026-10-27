@@ -777,3 +777,75 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 }
 /* o desfoque do cabeçalho cria um "contêiner" para elementos fixos; desliga enquanto a busca está em tela cheia */
 body.busca-aberta .topo { backdrop-filter: none; background: var(--fundo); }
+
+/* =====================================================================
+   JOGO EM VÁRIAS LOJAS — cartão agrupado e tela "Escolha a loja"
+   ===================================================================== */
+.jogo-agrupado { --cor-loja: #ffd23f; cursor: pointer; }
+.jogo-agrupado .jogo-capa { border: 0; padding: 0; width: 100%; cursor: pointer; }
+.logos-lojas {
+  position: absolute; top: 8px; left: 8px; z-index: 1; display: flex; align-items: center; gap: 0;
+  padding: 3px 9px 3px 4px; border-radius: 999px; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(6px);
+  font-size: 0.7rem; font-weight: 700; color: #fff;
+}
+.logos-lojas img { width: 18px; height: 18px; border-radius: 50%; background: #000; border: 2px solid var(--cor-loja, #222); margin-right: -5px; }
+.logos-lojas span { margin-left: 8px; }
+.logos-lojas em { font-style: normal; margin-left: 10px; }
+.preco-legenda { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--texto-suave); }
+.preco-de { flex-basis: 100%; font-size: 0.78rem; color: var(--texto-suave); }
+.billboard .preco-de { font-size: 0.9rem; }
+.link-escolher { background: none; border: 0; padding: 0; color: #ffd23f; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+.link-escolher:hover { text-decoration: underline; }
+
+.escolha {
+  width: min(560px, calc(100% - 24px)); max-height: calc(100vh - 48px); padding: 0; border: 1px solid var(--linha);
+  border-radius: 18px; background: var(--cartao); color: var(--texto); overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65);
+}
+.escolha[open] { animation: subir 0.22s ease both; display: flex; }
+.escolha::backdrop { background: rgba(5, 6, 9, 0.72); backdrop-filter: blur(3px); }
+body.escolha-aberta { overflow: hidden; }
+.escolha-conteudo { display: flex; flex-direction: column; width: 100%; overflow-y: auto; }
+.escolha-capa { position: relative; aspect-ratio: 16 / 6; background: #000; flex: 0 0 auto; }
+.escolha-capa img { width: 100%; height: 100%; object-fit: cover; }
+.escolha-capa::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, var(--cartao), transparent 70%); }
+.escolha-fechar {
+  position: absolute; top: 10px; right: 10px; z-index: 1; width: 36px; height: 36px; border-radius: 50%; border: 0;
+  background: rgba(0, 0, 0, 0.65); color: #fff; font-size: 1.3rem; cursor: pointer;
+}
+.escolha-corpo { padding: 0 18px 18px; margin-top: -18px; position: relative; }
+.escolha-corpo h2 { margin: 0 0 4px; font-size: 1.4rem; line-height: 1.15; }
+.escolha-resumo { margin: 0; color: var(--texto-suave); font-size: 0.9rem; }
+.escolha-resumo strong { color: var(--verde); }
+.escolha-historico { margin: 6px 0 0; font-size: 0.82rem; color: var(--texto-suave); }
+.escolha-historico strong { color: #ffd23f; }
+.escolha-subtitulo { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--texto-suave); margin: 16px 0 8px; }
+.escolha-lista { display: grid; gap: 8px; }
+.escolha-linha {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center;
+  padding: 10px 12px; border-radius: 12px; border: 1px solid var(--linha); background: var(--fundo-2);
+  text-decoration: none; color: var(--texto); border-left: 3px solid var(--cor-loja, var(--linha));
+  transition: transform 0.15s, border-color 0.15s, background 0.15s;
+}
+.escolha-linha:hover { transform: translateX(3px); background: color-mix(in srgb, var(--cor-loja, #fff) 10%, var(--fundo-2)); border-color: color-mix(in srgb, var(--cor-loja, #fff) 50%, var(--linha)); }
+.escolha-linha.menor { box-shadow: inset 0 0 0 1px rgba(53, 211, 154, 0.45); }
+.escolha-loja { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.escolha-loja img { width: 28px; height: 28px; border-radius: 7px; background: #000; flex: 0 0 auto; }
+.escolha-loja strong { display: block; font-size: 0.95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.escolha-loja small { color: var(--verde); font-size: 0.74rem; }
+.escolha-preco { display: flex; align-items: center; gap: 8px; }
+.escolha-preco .desconto { position: static; font-size: 0.75rem; padding: 2px 7px; }
+.escolha-preco strong { font-family: 'Space Grotesk', sans-serif; font-size: 1.1rem; color: var(--verde); white-space: nowrap; }
+.escolha-ir { color: var(--cor-loja, var(--texto-suave)); font-weight: 700; font-size: 0.85rem; }
+.escolha-rodape { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+.escolha-rodape .secao-nota { font-size: 0.75rem; flex: 1 1 200px; }
+
+/* celular: a tela de escolha sobe de baixo, ocupando quase tudo */
+@media (max-width: 640px) {
+  .escolha { width: 100%; max-width: none; max-height: 92vh; margin: auto 0 0; border-radius: 18px 18px 0 0; border-bottom: 0; }
+  .escolha-linha { grid-template-columns: minmax(0, 1fr) auto; }
+  .escolha-preco .preco-antigo { display: none; }
+  .escolha-ir { display: none; }
+}
+.escolha:focus, .escolha:focus-visible { outline: none; }
+.escolha-fechar:focus-visible, .escolha-linha:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }

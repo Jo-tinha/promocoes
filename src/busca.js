@@ -5,7 +5,8 @@ import { iniciarSessao } from './sessao.js';
 import { buscarPromocoes, buscarJogosPorNome } from './api.js';
 import { contexto, carregarContexto, precoEmReal } from './contexto.js';
 import { imgJogo } from './lojas.js';
-import { cartaoJogo, esqueletos, redesenharEstrelas } from './cartoes.js';
+import { cartaoItem, agruparPorJogo, esqueletos, redesenharEstrelas } from './cartoes.js';
+import { abrirEscolha } from './escolher-loja.js';
 import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela } from './estrela.js';
 import { salvarNoCatalogo } from './catalogo.js';
 import { esc } from './util.js';
@@ -98,7 +99,10 @@ async function carregar({ reiniciar = false } = {}) {
       if (p.gameID) estado.gameIDs.add(p.gameID);
     });
     salvarNoCatalogo(filtrada);
-    const html = filtrada.map((p, i) => cartaoJogo(p, { especial: true, i })).join('');
+    // o mesmo jogo em várias lojas vira um cartão só (o grupo inclui páginas anteriores)
+    const itens = agruparPorJogo(filtrada);
+    itens.forEach((it) => estado.promos.set(it.dealID, it));
+    const html = itens.map((p, i) => cartaoItem(p, { especial: true, i })).join('');
     if (reiniciar) grade.innerHTML = html;
     else grade.insertAdjacentHTML('beforeend', html);
     estado.total += filtrada.length;
@@ -167,6 +171,12 @@ new IntersectionObserver((entradas) => {
 }, { rootMargin: '600px' }).observe(botaoMais);
 
 ativarEstrelas();
+document.addEventListener('click', (e) => {
+  const alvo = e.target.closest('[data-escolher]');
+  if (!alvo || e.target.closest('[data-estrela]')) return;
+  const grupo = estado.promos.get(alvo.dataset.escolher);
+  if (grupo?.agrupado) abrirEscolha(grupo);
+});
 
 // ---------- Início ----------
 async function iniciar() {

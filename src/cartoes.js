@@ -78,3 +78,73 @@ export function redesenharEstrelas(buscarPromo) {
     rodape.insertAdjacentHTML('beforeend', botaoEstrela(p));
   });
 }
+
+// ---------- Jogo em várias lojas: um cartão só ----------
+const chaveDoJogo = (p) => p.gameID || String(p.titulo).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+// Junta as promoções do mesmo jogo, mantendo a ordem em que cada jogo apareceu primeiro.
+// Devolve itens normais (1 loja) e grupos { agrupado: true, ofertas: [...] } (2+ lojas).
+export function agruparPorJogo(lista) {
+  const grupos = new Map();
+  for (const p of lista) {
+    const k = chaveDoJogo(p);
+    if (!grupos.has(k)) grupos.set(k, []);
+    grupos.get(k).push(p);
+  }
+  return [...grupos.values()].map((ofertas) => {
+    if (ofertas.length === 1) return ofertas[0];
+    const base = ofertas[0];
+    const precosPromo = ofertas.map((o) => o.precoPromocional);
+    const precosNormais = ofertas.map((o) => o.precoNormal);
+    const media = (v) => v.reduce((s, x) => s + x, 0) / v.length;
+    return {
+      ...base,
+      agrupado: true,
+      ofertas,
+      dealID: `grupo-${chaveDoJogo(base)}`,
+      precoMedio: media(precosPromo),
+      precoNormalMedio: media(precosNormais),
+      menorPreco: Math.min(...precosPromo),
+      maiorDesconto: Math.max(...ofertas.map((o) => o.desconto)),
+      comentario: ofertas.map((o) => o.comentario).find(Boolean) || '',
+    };
+  });
+}
+
+function logosDasLojas(ofertas) {
+  const ids = [...new Set(ofertas.map((o) => o.lojaId))];
+  const visiveis = ids.slice(0, 4);
+  return `<span class="logos-lojas" title="${esc(ids.map((id) => contexto.lojas.get(id)?.nome || 'Loja').join(', '))}">
+    ${visiveis.map((id) => `<img src="${esc(contexto.lojas.get(id)?.icone || '')}" alt="" style="${varsDaLoja(id)}" />`).join('')}
+    ${ids.length > 4 ? `<span>+${ids.length - 4}</span>` : ''}
+    <em>${ids.length} lojas</em>
+  </span>`;
+}
+
+export function cartaoAgrupado(g, { i = 0 } = {}) {
+  return `
+    <article class="jogo jogo-agrupado" data-deal="${esc(g.dealID)}" data-escolher="${esc(g.dealID)}" style="--i:${Math.min(i, 20)}">
+      <button class="jogo-capa" type="button" data-escolher="${esc(g.dealID)}" tabindex="-1" aria-hidden="true">
+        ${imgJogo(g)}
+        ${logosDasLojas(g.ofertas)}
+        ${g.maiorDesconto >= 1 ? `<span class="desconto">até -${g.maiorDesconto}%</span>` : ''}
+      </button>
+      <div class="jogo-corpo">
+        <h3 title="${esc(g.titulo)}">${esc(g.titulo)}</h3>
+        ${g.comentario ? `<p class="comentario-dedo">“${esc(g.comentario)}”</p>` : ''}
+        ${metas(g)}
+        <div class="precos">
+          <span class="preco-legenda">média</span>
+          <span class="preco-final">${precoEmReal(g.precoMedio)}</span>
+          <span class="preco-de">a partir de ${precoEmReal(g.menorPreco)}</span>
+        </div>
+        <div class="jogo-rodape">
+          <button class="link-escolher" type="button" data-escolher="${esc(g.dealID)}">Escolher loja (${g.ofertas.length}) →</button>
+          ${botaoEstrela(g)}
+        </div>
+      </div>
+    </article>`;
+}
+
+// cartão certo para cada item (normal ou agrupado)
+export const cartaoItem = (item, opcoes) => (item.agrupado ? cartaoAgrupado(item, opcoes) : cartaoJogo(item, opcoes));

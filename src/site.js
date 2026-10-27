@@ -162,11 +162,42 @@ function montarVoltarAoTopo() {
   addEventListener('scroll', () => (botao.hidden = scrollY < 700), { passive: true });
 }
 
+// ---------- Rodinha do mouse nas faixas ----------
+// Com o mouse em cima de uma faixa de jogos, a rodinha rola a faixa para o lado.
+// Fora das faixas (laterais da página, entre as faixas) a rodinha rola a página normalmente.
+// Quando a faixa chega ao fim, a rodinha volta a rolar a página.
+function ativarRodinhaHorizontal() {
+  const travas = new WeakMap();
+  document.addEventListener(
+    'wheel',
+    (e) => {
+      if (e.ctrlKey || e.shiftKey) return; // zoom, ou o navegador já rola de lado com Shift
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return; // trackpad já está rolando de lado
+      const faixa = e.target.closest('.trilho, .atalhos-lojas');
+      if (!faixa) return;
+      const maximo = faixa.scrollWidth - faixa.clientWidth;
+      if (maximo <= 1) return; // nada para rolar de lado
+      const delta = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaMode === 2 ? e.deltaY * faixa.clientWidth : e.deltaY;
+      const noComeco = faixa.scrollLeft <= 0;
+      const noFim = faixa.scrollLeft >= maximo - 1;
+      if ((delta < 0 && noComeco) || (delta > 0 && noFim)) return; // na ponta: deixa a página rolar
+      e.preventDefault();
+      // o "encaixe" dos cartões atrapalha a rolagem pela rodinha; desliga enquanto ela gira
+      faixa.style.scrollSnapType = 'none';
+      clearTimeout(travas.get(faixa));
+      travas.set(faixa, setTimeout(() => (faixa.style.scrollSnapType = ''), 250));
+      faixa.scrollBy({ left: delta * 1.3, behavior: 'instant' });
+    },
+    { passive: false },
+  );
+}
+
 let iniciado = false;
 export function iniciarSite() {
   if (iniciado) return;
   iniciado = true;
   montarRodape();
   montarVoltarAoTopo();
+  ativarRodinhaHorizontal();
   if (!lerConsentimento()) montarAvisoCookies();
 }

@@ -88,6 +88,34 @@ export async function buscarOfertasDosJogos(gameIDs) {
   return resultado;
 }
 
+// Todas as ofertas atuais de UM jogo, em todas as lojas, + o menor preço já registrado
+export async function buscarOfertasDoJogo(gameID) {
+  const dados = await getJson(`${CHEAPSHARK}/api/1.0/games?id=${encodeURIComponent(gameID)}`);
+  const ofertas = (dados.deals || []).map((d) => {
+    const dealID = decodeURIComponent(d.dealID);
+    const normal = Number(d.retailPrice);
+    const preco = Number(d.price);
+    return {
+      dealID,
+      gameID,
+      lojaId: d.storeID,
+      precoNormal: normal,
+      precoPromocional: preco,
+      desconto: Math.round(Number(d.savings)) || 0,
+      link: linkDaPromocao(dealID),
+    };
+  });
+  return {
+    titulo: dados.info?.title || '',
+    imagem: dados.info?.thumb || '',
+    steamAppID: dados.info?.steamAppID || null,
+    menorPrecoHistorico: dados.cheapestPriceEver
+      ? { preco: Number(dados.cheapestPriceEver.price), data: new Date(Number(dados.cheapestPriceEver.date) * 1000) }
+      : null,
+    ofertas: ofertas.sort((a, b) => a.precoPromocional - b.precoPromocional),
+  };
+}
+
 // Jogos grátis: promoções de 100% na CheapShark + brindes da GamerPower
 export async function buscarGratis() {
   const [cheapshark, gamerpower] = await Promise.allSettled([
