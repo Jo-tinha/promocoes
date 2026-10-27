@@ -75,9 +75,47 @@ function cartaoRecomendacao(r, i) {
 
 // ---------- Banner principal ----------
 let rotacao;
+// Banner: a estrutura (fundo + texto) é criada uma vez; depois só o texto muda e o fundo faz um
+// crossfade entre duas camadas — a imagem não é recriada (era o que piscava a cada troca)
+function prepararBanner() {
+  if (elBillboard.querySelector('.billboard-texto')) return;
+  elBillboard.innerHTML = '<div class="billboard-fundo"><div class="camada"></div><div class="camada"></div></div><div class="billboard-texto"></div>';
+}
+
+let fundoAtual = '';
+function trocarFundoDoBanner(p) {
+  const html = imgJogo(p, 'banner', 'fetchpriority="high"');
+  const chave = html.match(/src="([^"]+)"/)?.[1] || '';
+  if (chave === fundoAtual) return; // mesma imagem: não mexe
+  fundoAtual = chave;
+  const [a, b] = elBillboard.querySelectorAll('.billboard-fundo .camada');
+  const visivel = a.classList.contains('ativa') ? a : b;
+  const proxima = visivel === a ? b : a;
+  proxima.innerHTML = html;
+  const img = proxima.querySelector('img');
+  const mostrar = () => {
+    proxima.classList.add('ativa');
+    visivel.classList.remove('ativa');
+  };
+  if (img.complete && img.naturalWidth) mostrar();
+  else {
+    img.addEventListener('load', mostrar, { once: true });
+    img.addEventListener('error', () => setTimeout(() => img.classList.contains('carregada') && mostrar(), 50));
+    // a cadeia de alternativas termina sempre marcando "carregada"; confere de novo depois
+    const conferir = setInterval(() => {
+      if (img.classList.contains('carregada')) {
+        clearInterval(conferir);
+        mostrar();
+      }
+    }, 100);
+    setTimeout(() => clearInterval(conferir), 8000);
+  }
+}
+
 function renderizarBillboard(itens) {
   clearInterval(rotacao);
   if (!itens.length) return;
+  prepararBanner();
   let atual = 0;
   const mostrar = (n) => {
     atual = n;
@@ -86,9 +124,9 @@ function renderizarBillboard(itens) {
     if (p.agrupado) p.ofertas.forEach((o) => estado.promos.set(o.dealID, o));
     elBillboard.classList.remove('vazio');
     elBillboard.setAttribute('style', varsDaLoja(p.lojaId));
-    elBillboard.innerHTML = `
-      <div class="billboard-fundo">${imgJogo(p, 'banner', 'fetchpriority="high"')}</div>
-      <div class="container billboard-conteudo" key="${n}">
+    trocarFundoDoBanner(p);
+    elBillboard.querySelector('.billboard-texto').innerHTML = `
+      <div class="container billboard-conteudo">
         <div class="billboard-rotulo">
           <span class="selo-tipo">${p.comentario !== undefined ? 'Destaque' : 'Em alta'}</span>
           ${p.agrupado ? `<span class="pilula-loja">${p.ofertas.length} lojas</span>` : p.lojaId || p.lojaNome ? pilulaLoja(p.lojaId, p.lojaNome) : ''}
@@ -123,7 +161,19 @@ function renderizarBillboard(itens) {
   };
   const reiniciar = () => {
     clearInterval(rotacao);
-    if (itens.length > 1) rotacao = setInterval(() => mostrar((atual + 1) % itens.length), 8000);
+    if (itens.length > 1) {
+      rotacao = setInterval(() => mostrar((atual + 1) % itens.length), 8000);
+      // pré-carrega as imagens dos próximos, para a troca ser instantânea
+      itens.forEach((it) => {
+        const t = document.createElement('template');
+        t.innerHTML = imgJogo(it, 'banner', '');
+        const img = t.content.querySelector('img');
+        img.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none';
+        document.body.append(img);
+        img.addEventListener('load', () => img.remove(), { once: true });
+        setTimeout(() => img.remove(), 15000);
+      });
+    }
   };
   reiniciar();
   estado.reBillboard = () => mostrar(atual);
@@ -166,13 +216,24 @@ async function carregarDestaques() {
 }
 
 // "exibir" (definido no painel): 'ambos', só no 'banner' ou só na 'faixa'
+let assinaturaDestaques = '';
 function desenharDestaques(lista) {
+  // assinatura: quais destaques, em que ordem e com que preço; se nada mudou, não mexe na tela
+  const assinatura = lista.map((d) => `${d.dealID}:${d.precoPromocional}:${d.exibir}`).join('|');
+  if (assinatura === assinaturaDestaques) return;
+  const redesenho = Boolean(assinaturaDestaques);
+  assinaturaDestaques = assinatura;
+
   const naFaixa = lista.filter((d) => d.exibir !== 'banner');
   const noBanner = agruparPorJogo(lista.filter((d) => d.exibir !== 'faixa'));
   const itens = agruparPorJogo(naFaixa);
+  const trilho = $('#trilho-destaques');
   $('#faixa-destaques').hidden = !itens.length;
   $('#qtd-destaques').textContent = `${itens.length} ${itens.length === 1 ? 'jogo' : 'jogos'}`;
-  $('#trilho-destaques').innerHTML = cartoesAgrupados(naFaixa);
+  const rolagem = trilho.scrollLeft;
+  trilho.classList.toggle('sem-animacao', redesenho); // não repete a entrada dos cartões
+  trilho.innerHTML = cartoesAgrupados(naFaixa);
+  trilho.scrollLeft = rolagem; // mantém a posição se a pessoa já tinha rolado
   if (noBanner.length) renderizarBillboard(noBanner.slice(0, 6));
   else semDestaquesNoBanner();
   estado.destaques = lista;

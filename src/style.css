@@ -951,3 +951,20 @@ td.ordem .botao { padding: 4px 8px; }
 .atalhos-busca .chip { flex: 0 0 auto; }
 .form .opcoes-exibir label { display: inline-flex; grid-template-columns: none; align-items: center; gap: 6px; white-space: nowrap; }
 .form .opcoes-exibir input { width: auto; }
+
+/* =====================================================================
+   SEM TREMOR — imagens aparecem só quando carregam; banner com crossfade
+   ===================================================================== */
+/* a imagem fica transparente enquanto testa as alternativas e entra com um fade quando uma carrega */
+.img-jogo { opacity: 0; transition: opacity 0.35s ease; }
+.img-jogo.carregada { opacity: 1; }
+/* redesenho da faixa (depois da conferência de preços) não repete a animação de entrada */
+.sem-animacao .jogo { animation: none; }
+
+/* banner: duas camadas de fundo que trocam com crossfade; o texto fica por cima */
+.billboard-texto { position: relative; width: 100%; }
+.billboard-fundo .camada { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s ease; }
+.billboard-fundo .camada.ativa { opacity: 1; }
+.billboard-fundo .camada img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.billboard-texto .billboard-conteudo { animation: subir 0.5s ease both; }
+@media (prefers-reduced-motion: reduce) { .billboard-fundo .camada { transition: none; } }

@@ -85,17 +85,32 @@ function fontesDaImagem(p, tipo) {
 
 const aspas = (t) => String(t).replaceAll('&', '&amp;').replaceAll('"', '&quot;');
 
-// <img> que tenta a melhor imagem e, se ela não existir, passa para a próxima da lista
+// URL que funcionou para cada imagem (chave = primeira opção). Evita repetir as tentativas que falham
+// a cada redesenho — era isso que fazia as imagens "tremerem".
+const imagemQueFuncionou = new Map();
+
+// <img> que tenta a melhor imagem e, se ela não existir, passa para a próxima da lista.
+// Fica transparente até uma delas carregar e aparece com um fade (as trocas não ficam visíveis).
 export function imgJogo(p, tipo = 'cartao', atributos = 'loading="lazy"') {
-  const [primeira, ...resto] = fontesDaImagem(p, tipo);
-  return `<img src="${aspas(primeira)}" data-alternativas="${aspas(resto.join('|'))}" onerror="proximaImagem(this)" alt="" ${atributos} />`;
+  const fontes = fontesDaImagem(p, tipo);
+  const chave = fontes[0];
+  const certa = imagemQueFuncionou.get(chave);
+  if (certa) return `<img class="img-jogo carregada" src="${aspas(certa)}" alt="" ${atributos} />`;
+  const [primeira, ...resto] = fontes;
+  return `<img class="img-jogo" src="${aspas(primeira)}" data-chave="${aspas(chave)}" data-alternativas="${aspas(resto.join('|'))}"
+    onload="imagemCarregou(this)" onerror="proximaImagem(this)" alt="" ${atributos} />`;
 }
 
 if (typeof window !== 'undefined') {
+  window.imagemCarregou = (img) => {
+    img.classList.add('carregada');
+    if (img.dataset.chave) imagemQueFuncionou.set(img.dataset.chave, img.currentSrc || img.src);
+  };
   window.proximaImagem = (img) => {
     const resto = (img.dataset.alternativas || '').split('|').filter(Boolean);
     if (!resto.length) {
       img.onerror = null;
+      img.classList.add('carregada'); // nenhuma funcionou: mostra o fundo vazio
       return;
     }
     img.dataset.alternativas = resto.slice(1).join('|');
