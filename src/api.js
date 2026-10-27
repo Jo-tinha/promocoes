@@ -56,9 +56,24 @@ function converter(p) {
 
 // Promoções atuais na CheapShark.
 // ordem: 'Deal Rating' (melhor custo-benefício), 'Recent', 'Savings', 'Price', 'Reviews'
-export async function buscarPromocoes({ termo = '', lojaId = '', ordem = 'Deal Rating', limite = 30, precoMaximo = null, pagina = 0 } = {}) {
+// ordem também aceita 'Metacritic' (mais aclamados) e 'Release' (lançamentos);
+// steamMin = nota mínima na Steam (%), metacriticMin = nota mínima no Metacritic, aaa = só jogos de preço cheio alto
+export async function buscarPromocoes({
+  termo = '',
+  lojaId = '',
+  ordem = 'Deal Rating',
+  limite = 30,
+  precoMaximo = null,
+  pagina = 0,
+  steamMin = 0,
+  metacriticMin = 0,
+  aaa = false,
+} = {}) {
   const params = new URLSearchParams({ onSale: '1', pageSize: String(limite), sortBy: ordem, pageNumber: String(pagina) });
   if (termo) params.set('title', termo);
+  if (steamMin) params.set('steamRating', String(steamMin));
+  if (metacriticMin) params.set('metacritic', String(metacriticMin));
+  if (aaa) params.set('AAA', '1');
   if (lojaId) params.set('storeID', lojaId);
   if (precoMaximo !== null) params.set('upperPrice', String(precoMaximo));
   const lista = await getJson(`${CHEAPSHARK}/api/1.0/deals?${params}`);

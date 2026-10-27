@@ -91,7 +91,7 @@ function renderizarBillboard(itens) {
       <div class="container billboard-conteudo" key="${n}">
         <div class="billboard-rotulo">
           <span class="selo-tipo">${p.comentario !== undefined ? 'Destaque' : 'Em alta'}</span>
-          ${p.agrupado ? `<span class="pilula-loja">${p.ofertas.length} lojas</span>` : pilulaLoja(p.lojaId)}
+          ${p.agrupado ? `<span class="pilula-loja">${p.ofertas.length} lojas</span>` : p.lojaId || p.lojaNome ? pilulaLoja(p.lojaId, p.lojaNome) : ''}
           ${p.agrupado ? (p.maiorDesconto >= 1 ? `<span class="desconto" style="position:static">até -${p.maiorDesconto}%</span>` : '') : p.desconto >= 1 ? `<span class="desconto" style="position:static">-${p.desconto}%</span>` : ''}
         </div>
         <h1>${esc(p.titulo)}</h1>
@@ -106,7 +106,7 @@ function renderizarBillboard(itens) {
           ${
             p.agrupado
               ? `<button class="botao" type="button" data-escolher="${esc(p.dealID)}">Escolher loja (${p.ofertas.length})</button>`
-              : `<a class="botao" href="${esc(p.link)}" target="_blank" rel="noopener sponsored">Ver na loja</a>`
+              : `<a class="botao" href="${esc(p.link)}" target="_blank" rel="noopener sponsored">${esc(p.textoBotao || 'Ver na loja')}</a>`
           }
           ${botaoEstrela(p, { grande: true })}
         </div>
@@ -136,7 +136,7 @@ async function carregarDestaques() {
   trilho.innerHTML = esqueletos(4);
   let destaques = [];
   try {
-    destaques = await listarDestaques();
+    destaques = (await listarDestaques()).filter((d) => d.ativo); // pausados no painel não aparecem
   } catch (erro) {
     console.error(erro);
   }
@@ -165,13 +165,25 @@ async function carregarDestaques() {
   }
 }
 
+// "exibir" (definido no painel): 'ambos', só no 'banner' ou só na 'faixa'
 function desenharDestaques(lista) {
-  const itens = agruparPorJogo(lista);
-  $('#faixa-destaques').hidden = false;
+  const naFaixa = lista.filter((d) => d.exibir !== 'banner');
+  const noBanner = agruparPorJogo(lista.filter((d) => d.exibir !== 'faixa'));
+  const itens = agruparPorJogo(naFaixa);
+  $('#faixa-destaques').hidden = !itens.length;
   $('#qtd-destaques').textContent = `${itens.length} ${itens.length === 1 ? 'jogo' : 'jogos'}`;
-  $('#trilho-destaques').innerHTML = cartoesAgrupados(lista);
-  renderizarBillboard(itens.slice(0, 5));
+  $('#trilho-destaques').innerHTML = cartoesAgrupados(naFaixa);
+  if (noBanner.length) renderizarBillboard(noBanner.slice(0, 6));
+  else semDestaquesNoBanner();
   estado.destaques = lista;
+}
+
+async function semDestaquesNoBanner() {
+  try {
+    renderizarBillboard((await buscarPromocoes({ ordem: 'Deal Rating', limite: 5 })).filter((p) => p.imagem));
+  } catch (erro) {
+    console.error(erro);
+  }
 }
 
 // Sem destaques (ou todos encerrados): esconde a faixa e o banner mostra as melhores promoções do momento

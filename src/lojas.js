@@ -67,6 +67,10 @@ export function idSteam(p) {
 }
 
 function fontesDaImagem(p, tipo) {
+  if (p.manual) {
+    const fontes = tipo === 'banner' ? [p.imagemBanner, p.imagem] : [p.imagem, p.imagemBanner];
+    return [...new Set([...fontes.filter(Boolean), PIXEL_VAZIO])];
+  }
   const id = idSteam(p);
   const fontes = [];
   if (id) {

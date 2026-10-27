@@ -2,7 +2,7 @@
 import { contexto, precoEmReal } from './contexto.js';
 import { varsDaLoja, lojaPelaPlataforma, imgJogo } from './lojas.js';
 import { botaoEstrela } from './estrela.js';
-import { esc } from './util.js';
+import { esc, formatarReal } from './util.js';
 
 export function pilulaLoja(lojaId, textoAlternativo = '') {
   const loja = contexto.lojas.get(lojaId);
@@ -21,11 +21,15 @@ export function metas(p) {
   return itens.length ? `<div class="metas">${itens.join('')}</div>` : '';
 }
 
+// destaques manuais guardam o preço em reais; os da API, em dólar
+const valor = (p, v) => (p.moeda === 'BRL' ? formatarReal(v) : precoEmReal(v));
+
 export function precos(p) {
+  if (p.precoPromocional === null || p.precoPromocional === undefined) return ''; // banner sem preço (evento, anúncio)
   const gratis = p.precoPromocional === 0;
   return `<div class="precos">
-    ${p.precoNormal > 0 ? `<span class="preco-antigo">${precoEmReal(p.precoNormal)}</span>` : ''}
-    <span class="preco-final">${gratis ? 'Grátis' : precoEmReal(p.precoPromocional)}</span>
+    ${p.precoNormal > p.precoPromocional ? `<span class="preco-antigo">${valor(p, p.precoNormal)}</span>` : ''}
+    <span class="preco-final">${gratis ? 'Grátis' : valor(p, p.precoPromocional)}</span>
   </div>`;
 }
 
@@ -37,7 +41,7 @@ export function cartaoJogo(p, { especial = false, i = 0 } = {}) {
     <article class="jogo" data-deal="${esc(p.dealID)}" style="${varsDaLoja(lojaId)};--i:${Math.min(i, 20)}">
       <a class="jogo-capa" href="${esc(p.link)}" target="_blank" rel="noopener sponsored" tabindex="-1">
         ${imgJogo(p)}
-        ${especial ? pilulaLoja(lojaId, p.plataformas) : ''}
+        ${especial ? pilulaLoja(lojaId, p.lojaNome || p.plataformas) : ''}
         ${p.desconto >= 1 ? `<span class="desconto${gratis ? ' gratis' : ''}">${gratis ? 'GRÁTIS' : `-${p.desconto}%`}</span>` : ''}
       </a>
       <div class="jogo-corpo">
@@ -46,7 +50,7 @@ export function cartaoJogo(p, { especial = false, i = 0 } = {}) {
         ${metas(p)}
         ${precos(p)}
         <div class="jogo-rodape">
-          <a href="${esc(p.link)}" target="_blank" rel="noopener sponsored">${gratis ? 'Resgatar' : 'Ver na loja'} →</a>
+          <a href="${esc(p.link)}" target="_blank" rel="noopener sponsored">${esc(p.textoBotao || (gratis ? 'Resgatar' : 'Ver na loja'))} →</a>
           ${botaoEstrela(p)}
         </div>
       </div>
@@ -81,7 +85,7 @@ export function redesenharEstrelas(buscarPromo) {
 }
 
 // ---------- Jogo em várias lojas: um cartão só ----------
-const chaveDoJogo = (p) => p.gameID || String(p.titulo).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const chaveDoJogo = (p) => (p.manual ? p.dealID : p.gameID) || String(p.titulo).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 // Junta as promoções do mesmo jogo, mantendo a ordem em que cada jogo apareceu primeiro.
 // Devolve itens normais (1 loja) e grupos { agrupado: true, ofertas: [...] } (2+ lojas).

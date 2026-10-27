@@ -10,6 +10,16 @@ const ICONE_LUPA =
 
 const cache = new Map(); // termo → sugestões (evita repetir a mesma consulta)
 
+// atalhos mostrados com o campo vazio (os mesmos da página de busca)
+const EXPLORAR = [
+  { icone: '🏆', rotulo: 'Mais aclamados', href: '/busca.html?ordem=Metacritic&mc=75' },
+  { icone: '👍', rotulo: 'Mais bem avaliados na Steam', href: '/busca.html?ordem=Reviews&steam=85' },
+  { icone: '🆕', rotulo: 'Lançamentos em promoção', href: '/busca.html?ordem=Release' },
+  { icone: '💥', rotulo: 'Maiores descontos', href: '/busca.html?ordem=Savings&desc=75' },
+  { icone: '🎮', rotulo: 'Jogos AAA em promoção', href: '/busca.html?aaa=1' },
+  { icone: '🪙', rotulo: 'Até R$ 20', href: '/busca.html?max=20&ordem=Metacritic' },
+];
+
 const urlBusca = (termo) => `/busca.html?q=${encodeURIComponent(termo)}`;
 const normalizar = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -85,11 +95,17 @@ export function iniciarBusca(alvo) {
     itens[n].scrollIntoView({ block: 'nearest' });
   }
 
+  // Campo vazio: buscas recentes (se houver) + atalhos para explorar
   function mostrarRecentes() {
     const recentes = lerRecentes();
-    if (!recentes.length) return fecharPainel();
+    const explorar = EXPLORAR.map(
+      (a, i) => `
+        <a class="busca-opcao recente" id="busca-op-x${i}" role="option" data-opcao data-termo="" href="${a.href}">
+          <span class="busca-relogio" aria-hidden="true">${a.icone}</span><span class="busca-titulo">${a.rotulo}</span><span></span>
+        </a>`,
+    ).join('');
     abrirPainel(`
-      <div class="busca-grupo"><span>Buscas recentes</span><button type="button" class="busca-link" data-limpar-historico>Limpar</button></div>
+      ${recentes.length ? '<div class="busca-grupo"><span>Buscas recentes</span><button type="button" class="busca-link" data-limpar-historico>Limpar</button></div>' : ''}
       ${recentes
         .map(
           (r, i) => `
@@ -98,7 +114,9 @@ export function iniciarBusca(alvo) {
           <button type="button" class="busca-remover" data-remover="${esc(r)}" aria-label="Remover ${esc(r)} das recentes">×</button>
         </a>`,
         )
-        .join('')}`);
+        .join('')}
+      <div class="busca-grupo"><span>Explorar</span></div>
+      ${explorar}`);
   }
 
   async function sugerir(termo) {

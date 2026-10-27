@@ -94,3 +94,15 @@ Importe o repositório em <https://vercel.com/new>. O preset **Vite** é detecta
 ## Busca
 
 A barra fica no cabeçalho de todas as páginas: sugestões com capa e menor preço enquanto você digita (CheapShark `/games?title=`), trecho buscado em destaque, setas ↑ ↓ + Enter, Esc para fechar, botão de limpar, buscas recentes (só se o usuário permitir "Preferências" nos cookies) e atalho **/** para focar. No celular, a lupa abre a busca em tela cheia. Enter leva para `/busca.html?q=…`, com filtros de loja, preço máximo em R$, desconto mínimo, só grátis e ordenação — todos guardados no endereço, para o link poder ser compartilhado — e uma lista de jogos com o mesmo nome que não estão em promoção, para estrelar.
+
+## Painel do admin
+
+- **Resumo** no topo: destaques ativos, pausados, adicionados à mão, recomendações de hoje e jogos no catálogo.
+- **Averiguar promoções**: promoções que chegam da CheapShark, com "★ Destacar".
+- **Destaques**: ordem (↑ ↓), onde aparece (banner e faixa, só banner ou só faixa), pausar/ativar sem apagar, editar comentário, situação ao vivo (no ar, preço mudou, encerrada), salvar preço novo, remover encerrados, filtros e busca.
+- **＋ Adicionar**: destaque criado à mão para algo que não vem da API (jogo de outra loja, evento, anúncio): título, imagens do cartão e do banner, link, loja, preço em R$ (opcional), texto do botão, comentário, data de término e onde aparece, com pré-visualização ao vivo.
+- **Recomendações diárias**: CRUD do catálogo de jogos, notícias e eventos.
+
+## Explorar
+
+`/busca.html` funciona com ou sem nome digitado. Atalhos prontos: Mais aclamados (Metacritic), Mais bem avaliados na Steam, Lançamentos, Maiores descontos, AAA em promoção, Até R$ 20, Entraram agora e Grátis. Filtros: loja, preço máximo, desconto mínimo, nota Steam mínima, Metacritic mínimo, só AAA, só grátis e 8 ordenações.

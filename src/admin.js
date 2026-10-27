@@ -3,6 +3,10 @@ import './style.css';
 import { iniciarSessao } from './sessao.js';
 import { iniciarAveriguar, carregarVitrineAdmin } from './admin-averiguar.js';
 import { iniciarRecomendacoesAdmin, carregarRecomendacoesAdmin } from './admin-recomendacoes.js';
+import { iniciarAdicionar } from './admin-adicionar.js';
+import { listarRecomendacoes } from './recomendacoes.js';
+import { listarCatalogo } from './catalogo.js';
+import { hojeISO } from './util.js';
 import { esc } from './util.js';
 import { sendEmailVerification } from 'firebase/auth';
 import { EMAILS_ADMIN } from './admins.js';
@@ -17,6 +21,7 @@ const abas = {
   averiguar: { painel: document.querySelector('#aba-averiguar') },
   vitrine: { painel: document.querySelector('#aba-vitrine'), carregar: carregarVitrineAdmin },
   recomendacoes: { painel: document.querySelector('#aba-recomendacoes'), carregar: carregarRecomendacoesAdmin },
+  adicionar: { painel: document.querySelector('#aba-adicionar') },
 };
 
 function abrirAba(nome) {
@@ -62,7 +67,32 @@ iniciarSessao('admin', ({ usuario, admin }) => {
   if (!iniciado) {
     iniciado = true;
     iniciarRecomendacoesAdmin();
+    iniciarAdicionar({ depoisDeSalvar: carregarVitrineAdmin });
     iniciarAveriguar();
+    carregarResumo();
     abrirAba('averiguar');
   }
 });
+
+// ---------- Resumo no topo do painel ----------
+const $ = (s) => document.querySelector(s);
+document.addEventListener('destaques-mudaram', (e) => {
+  const lista = e.detail;
+  $('#r-ativos').textContent = lista.filter((p) => p.ativo && p.emPromocao !== false).length;
+  $('#r-pausados').textContent = lista.filter((p) => !p.ativo).length;
+  $('#r-manuais').textContent = lista.filter((p) => p.manual).length;
+});
+
+async function carregarResumo() {
+  try {
+    const recs = await listarRecomendacoes(100);
+    $('#r-recs').textContent = recs.filter((r) => r.data === hojeISO()).length;
+  } catch {
+    $('#r-recs').textContent = '?';
+  }
+  try {
+    $('#r-jogos').textContent = (await listarCatalogo()).length.toLocaleString('pt-BR');
+  } catch {
+    $('#r-jogos').textContent = '?';
+  }
+}

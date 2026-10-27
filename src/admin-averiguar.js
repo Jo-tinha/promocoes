@@ -1,9 +1,20 @@
 // Abas "Averiguar promoções" e "Destaques": todas as promoções entram na vitrine automaticamente;
 // o admin averigua o que está chegando e escolhe a dedo as que viram destaque.
 import { buscarPromocoes, buscarPromocaoPorId } from './api.js';
-import { destacar, listarDestaques, atualizarDestaque, removerDestaque, conferirDestaquesAoVivo, editarComentarioDestaque } from './destaques.js';
+import {
+  destacar,
+  listarDestaques,
+  atualizarDestaque,
+  removerDestaque,
+  conferirDestaquesAoVivo,
+  editarComentarioDestaque,
+  alternarAtivoDestaque,
+  definirExibicaoDestaque,
+  salvarOrdemDestaques,
+} from './destaques.js';
+import { editarManual } from './admin-adicionar.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
-import { esc, IMAGEM_PADRAO } from './util.js';
+import { esc, IMAGEM_PADRAO, formatarReal } from './util.js';
 import { sincronizarCatalogo } from './catalogo.js';
 
 const formFiltros = document.querySelector('#filtros-averiguar');
@@ -68,51 +79,94 @@ async function buscarChegando() {
 // ---------- Na vitrine ----------
 // situação de agora (vinda da conferência ao vivo); undefined = ainda conferindo
 function situacao(p) {
+  if (!p.ativo) return '<span class="status off">Pausado</span>';
   if (p.emPromocao === undefined) return '<span class="status off">conferindo…</span>';
-  if (!p.emPromocao) return '<span class="status encerrada">Encerrada</span>';
+  if (!p.emPromocao) return `<span class="status encerrada">${p.manual ? 'Data passou' : 'Encerrada'}</span>`;
   if (p.precoMudou) return '<span class="status mudou">Preço mudou</span>';
-  return '<span class="status ok">Em promoção</span>';
+  if (p.manual && p.termina) return `<span class="status ok">Até ${p.termina.split('-').reverse().join('/')}</span>`;
+  return '<span class="status ok">No ar</span>';
 }
 
-function linhaVitrine(p) {
-  const aprovada = p.criadoEm ? p.criadoEm.toDate().toLocaleDateString('pt-BR') : '—';
-  const salvo = p.salvo || p; // preço gravado no Firestore
+const valor = (p, v) => (p.moeda === 'BRL' ? formatarReal(v) : precoEmReal(v));
+
+function precoCelula(p) {
+  if (p.precoPromocional === null || p.precoPromocional === undefined) return '<span class="secao-nota">sem preço</span>';
+  const salvo = p.salvo || p;
   const mudou = p.emPromocao && p.precoMudou;
   return `
-    <tr class="${p.emPromocao === false ? 'linha-encerrada' : ''}">
-      <td><img class="miniatura" src="${esc(p.imagem)}" alt="" onerror="this.src='${IMAGEM_PADRAO}'" /></td>
-      <td><a href="${esc(p.link)}" target="_blank" rel="noopener"><strong>${esc(p.titulo)}</strong></a><br /><span class="secao-nota">${esc(nomeDaLoja(p.lojaId))}${p.comentario ? ` · “${esc(p.comentario)}”` : ''}</span></td>
-      <td>
-        ${mudou ? `<span class="preco-antigo">${precoEmReal(salvo.precoPromocional)}</span> → ` : `<span class="preco-antigo">${precoEmReal(p.precoNormal)}</span><br />`}
-        <strong>${precoEmReal(p.precoPromocional)}</strong> <span class="secao-nota">(-${p.desconto}%)</span>
+    ${mudou ? `<span class="preco-antigo">${valor(p, salvo.precoPromocional)}</span> → ` : p.precoNormal > p.precoPromocional ? `<span class="preco-antigo">${valor(p, p.precoNormal)}</span><br />` : ''}
+    <strong>${p.precoPromocional === 0 ? 'Grátis' : valor(p, p.precoPromocional)}</strong>
+    ${p.desconto ? `<span class="secao-nota">(-${p.desconto}%)</span>` : ''}`;
+}
+
+function linhaVitrine(p, posicao, total) {
+  const mudou = p.emPromocao && p.precoMudou;
+  const origem = p.manual ? `<span class="etiqueta manual">Manual</span> ${esc(p.lojaNome || nomeDaLoja(p.lojaId))}` : `<span class="etiqueta api">API</span> ${esc(nomeDaLoja(p.lojaId))}`;
+  return `
+    <tr class="${p.emPromocao === false || !p.ativo ? 'linha-encerrada' : ''}">
+      <td class="ordem">
+        <button class="botao secundario pequeno" type="button" data-mover="-1" data-id="${esc(p.id)}" ${posicao === 0 ? 'disabled' : ''} aria-label="Subir">↑</button>
+        <button class="botao secundario pequeno" type="button" data-mover="1" data-id="${esc(p.id)}" ${posicao === total - 1 ? 'disabled' : ''} aria-label="Descer">↓</button>
       </td>
-      <td>${aprovada}</td>
+      <td><img class="miniatura" src="${esc(p.imagem)}" alt="" onerror="this.src='${IMAGEM_PADRAO}'" /></td>
+      <td><a href="${esc(p.link)}" target="_blank" rel="noopener"><strong>${esc(p.titulo)}</strong></a><br /><span class="secao-nota">${origem}${p.comentario ? ` · “${esc(p.comentario)}”` : ''}</span></td>
+      <td>${precoCelula(p)}</td>
+      <td>
+        <select class="select-exibir" data-exibir="${esc(p.id)}" aria-label="Onde aparece">
+          <option value="ambos" ${p.exibir === 'ambos' ? 'selected' : ''}>Banner e faixa</option>
+          <option value="banner" ${p.exibir === 'banner' ? 'selected' : ''}>Só banner</option>
+          <option value="faixa" ${p.exibir === 'faixa' ? 'selected' : ''}>Só faixa</option>
+        </select>
+      </td>
       <td>${situacao(p)}</td>
       <td>
         <div class="acoes-linha">
-          <button class="botao secundario pequeno" type="button" data-comentar="${esc(p.id)}">Comentário</button>
-          <button class="botao secundario pequeno" type="button" data-atualizar="${esc(p.id)}">${mudou ? 'Salvar preço novo' : 'Atualizar preço'}</button>
+          ${
+            p.manual
+              ? `<button class="botao secundario pequeno" type="button" data-editar="${esc(p.id)}">Editar</button>`
+              : `<button class="botao secundario pequeno" type="button" data-comentar="${esc(p.id)}">Comentário</button>
+                 <button class="botao secundario pequeno" type="button" data-atualizar="${esc(p.id)}">${mudou ? 'Salvar preço novo' : 'Atualizar preço'}</button>`
+          }
+          <button class="botao secundario pequeno" type="button" data-pausar="${esc(p.id)}">${p.ativo ? 'Pausar' : 'Ativar'}</button>
           <button class="botao perigo pequeno" type="button" data-remover="${esc(p.id)}">Remover</button>
         </div>
       </td>
     </tr>`;
 }
 
+const FILTROS = {
+  '': () => true,
+  ativos: (p) => p.ativo && p.emPromocao !== false,
+  pausados: (p) => !p.ativo,
+  manuais: (p) => p.manual,
+  api: (p) => !p.manual,
+  encerrados: (p) => p.emPromocao === false,
+};
+
 function desenharTabela() {
   const encerrados = naVitrine.filter((p) => p.emPromocao === false).length;
   const mudaram = naVitrine.filter((p) => p.emPromocao && p.precoMudou).length;
+  const pausados = naVitrine.filter((p) => !p.ativo).length;
   qtdVitrine.hidden = naVitrine.length === 0;
   qtdVitrine.textContent = naVitrine.length;
   notaVitrine.textContent =
-    `${naVitrine.length} ${naVitrine.length === 1 ? 'destaque' : 'destaques'} (os 5 primeiros giram no banner)` +
+    `${naVitrine.length} ${naVitrine.length === 1 ? 'destaque' : 'destaques'}` +
+    (pausados ? ` · ${pausados} pausado${pausados > 1 ? 's' : ''}` : '') +
     (encerrados ? ` · ${encerrados} encerrado${encerrados > 1 ? 's' : ''} (já escondido${encerrados > 1 ? 's' : ''} da vitrine)` : '') +
     (mudaram ? ` · ${mudaram} com preço diferente do salvo` : '');
   const botaoEncerrados = document.querySelector('#remover-encerrados');
   botaoEncerrados.hidden = !encerrados;
   botaoEncerrados.textContent = `Remover ${encerrados} encerrado${encerrados > 1 ? 's' : ''}`;
+
+  const termo = document.querySelector('#busca-destaques').value.trim().toLowerCase();
+  const filtro = FILTROS[document.querySelector('#filtro-destaques').value] || FILTROS[''];
+  const visiveis = naVitrine.filter((p) => filtro(p) && (!termo || p.titulo.toLowerCase().includes(termo)));
   listaVitrine.innerHTML = naVitrine.length
-    ? naVitrine.map(linhaVitrine).join('')
-    : '<tr><td colspan="6">Nenhum destaque ainda. Use a aba "Averiguar promoções".</td></tr>';
+    ? visiveis.length
+      ? visiveis.map((p) => linhaVitrine(p, naVitrine.indexOf(p), naVitrine.length)).join('')
+      : '<tr><td colspan="7">Nenhum destaque com esse filtro.</td></tr>'
+    : '<tr><td colspan="7">Nenhum destaque ainda. Use "Averiguar promoções" ou "＋ Adicionar".</td></tr>';
+  document.dispatchEvent(new CustomEvent('destaques-mudaram', { detail: naVitrine }));
 }
 
 export async function carregarVitrineAdmin() {
@@ -125,7 +179,7 @@ export async function carregarVitrineAdmin() {
     desenharTabela();
   } catch (erro) {
     console.error(erro);
-    if (!naVitrine.length) listaVitrine.innerHTML = '<tr><td colspan="6" class="mensagem erro">Erro ao carregar os destaques.</td></tr>';
+    if (!naVitrine.length) listaVitrine.innerHTML = '<tr><td colspan="7" class="mensagem erro">Erro ao carregar os destaques.</td></tr>';
   }
 }
 
@@ -175,8 +229,65 @@ export async function iniciarAveriguar() {
     }
   });
 
+  document.querySelector('#busca-destaques').addEventListener('input', desenharTabela);
+  document.querySelector('#filtro-destaques').addEventListener('change', desenharTabela);
+
+  // onde aparece (banner, faixa ou ambos)
+  listaVitrine.addEventListener('change', async (e) => {
+    const select = e.target.closest('[data-exibir]');
+    if (!select) return;
+    select.disabled = true;
+    try {
+      await definirExibicaoDestaque(select.dataset.exibir, select.value);
+      const p = naVitrine.find((x) => x.id === select.dataset.exibir);
+      if (p) p.exibir = select.value;
+    } catch (erro) {
+      console.error(erro);
+      alert('Não foi possível salvar. Tente de novo.');
+    } finally {
+      select.disabled = false;
+    }
+  });
+
   // U — atualizar preço / D — remover
   listaVitrine.addEventListener('click', async (e) => {
+    const mover = e.target.closest('[data-mover]');
+    if (mover) {
+      const i = naVitrine.findIndex((p) => p.id === mover.dataset.id);
+      const j = i + Number(mover.dataset.mover);
+      if (i < 0 || j < 0 || j >= naVitrine.length) return;
+      [naVitrine[i], naVitrine[j]] = [naVitrine[j], naVitrine[i]];
+      desenharTabela();
+      try {
+        await salvarOrdemDestaques(naVitrine.map((p) => p.id));
+      } catch (erro) {
+        console.error(erro);
+        alert('Não foi possível salvar a nova ordem.');
+        await carregarVitrineAdmin();
+      }
+      return;
+    }
+    const pausar = e.target.closest('[data-pausar]');
+    if (pausar) {
+      const p = naVitrine.find((x) => x.id === pausar.dataset.pausar);
+      pausar.disabled = true;
+      try {
+        await alternarAtivoDestaque(p.id, !p.ativo);
+        p.ativo = !p.ativo;
+        desenharTabela();
+      } catch (erro) {
+        console.error(erro);
+        alert('Não foi possível mudar. Tente de novo.');
+        pausar.disabled = false;
+      }
+      return;
+    }
+    const editar = e.target.closest('[data-editar]');
+    if (editar) {
+      editarManual(naVitrine.find((x) => x.id === editar.dataset.editar));
+      document.querySelector('[data-aba="adicionar"]').click();
+      return;
+    }
     const comentar = e.target.closest('[data-comentar]');
     if (comentar) {
       const promo = naVitrine.find((p) => p.id === comentar.dataset.comentar);
@@ -224,8 +335,9 @@ export async function iniciarAveriguar() {
     let encerradas = 0;
     try {
       // uma de cada vez, para não sobrecarregar a API pública
-      for (const [i, p] of naVitrine.entries()) {
-        botaoAtualizarTodas.textContent = `Atualizando ${i + 1}/${naVitrine.length}…`;
+      const daApi = naVitrine.filter((p) => !p.manual);
+      for (const [i, p] of daApi.entries()) {
+        botaoAtualizarTodas.textContent = `Atualizando ${i + 1}/${daApi.length}…`;
         if (!(await atualizarPreco(p))) encerradas += 1;
       }
       await carregarVitrineAdmin();

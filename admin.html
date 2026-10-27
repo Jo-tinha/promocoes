@@ -23,8 +23,19 @@
       <nav class="abas container" role="tablist" aria-label="Seções do painel">
         <button class="aba" role="tab" data-aba="averiguar" aria-selected="true">Averiguar promoções</button>
         <button class="aba" role="tab" data-aba="vitrine" aria-selected="false">Destaques <span class="contador" id="qtd-vitrine" hidden></span></button>
+        <button class="aba" role="tab" data-aba="adicionar" aria-selected="false">＋ Adicionar</button>
         <button class="aba" role="tab" data-aba="recomendacoes" aria-selected="false">Recomendações diárias</button>
       </nav>
+
+      <!-- Resumo rápido -->
+      <div class="container resumo-painel" id="resumo-painel" aria-label="Resumo">
+        <div class="resumo-item"><strong id="r-ativos">–</strong><span>destaques ativos</span></div>
+        <div class="resumo-item"><strong id="r-pausados">–</strong><span>pausados</span></div>
+        <div class="resumo-item"><strong id="r-manuais">–</strong><span>adicionados à mão</span></div>
+        <div class="resumo-item"><strong id="r-recs">–</strong><span>recomendações hoje</span></div>
+        <div class="resumo-item"><strong id="r-jogos">–</strong><span>jogos no catálogo</span></div>
+        <a class="botao secundario pequeno" href="/" target="_blank" rel="noopener">Ver vitrine ↗</a>
+      </div>
 
       <!-- Averiguar: promoções que chegam da CheapShark -->
       <main class="container painel-unico" id="aba-averiguar" role="tabpanel">
@@ -66,14 +77,94 @@
               <button class="botao secundario pequeno" type="button" id="atualizar-todas">Atualizar todos os preços</button>
             </div>
           </div>
+          <div class="filtros" style="margin-top:12px">
+            <input type="search" id="busca-destaques" placeholder="Filtrar destaques pelo nome" aria-label="Filtrar destaques" />
+            <select id="filtro-destaques" aria-label="Mostrar">
+              <option value="">Todos</option>
+              <option value="ativos">Só ativos</option>
+              <option value="pausados">Só pausados</option>
+              <option value="manuais">Só adicionados à mão</option>
+              <option value="api">Só da API</option>
+              <option value="encerrados">Só encerrados</option>
+            </select>
+          </div>
+          <p class="secao-nota" style="margin:0 0 8px">Use ↑ ↓ para mudar a ordem: os primeiros aparecem antes na faixa e giram no banner.</p>
           <div class="tabela-wrap">
             <table>
               <thead>
-                <tr><th></th><th>Jogo</th><th>Preço</th><th>Destacado em</th><th>Situação</th><th>Ações</th></tr>
+                <tr><th>Ordem</th><th></th><th>Jogo</th><th>Preço</th><th>Onde aparece</th><th>Situação</th><th>Ações</th></tr>
               </thead>
               <tbody id="lista-vitrine"></tbody>
             </table>
           </div>
+        </section>
+      </main>
+
+      <!-- Adicionar destaque manual (não vem da API) -->
+      <main class="container painel painel-adicionar" id="aba-adicionar" role="tabpanel" hidden>
+        <section class="caixa">
+          <h2 id="titulo-form-manual">Adicionar destaque</h2>
+          <p class="secao-nota" style="margin:-6px 0 14px">Para jogos, eventos ou anúncios que não vêm da CheapShark. Aparece nos Destaques e/ou no banner da vitrine.</p>
+          <form class="form" id="form-manual" novalidate>
+            <label>Título
+              <input name="titulo" maxlength="90" required placeholder="ex.: Festival de Jogos Indie" />
+            </label>
+            <label>Imagem do cartão <span class="secao-nota">— link, formato paisagem (ex.: 616×353)</span>
+              <input name="imagem" type="url" required placeholder="https://…" />
+            </label>
+            <label>Imagem do banner <span class="secao-nota">— opcional, larga (ex.: 1920×620)</span>
+              <input name="imagemBanner" type="url" placeholder="https://… (se vazio, usa a do cartão)" />
+            </label>
+            <label>Link de destino
+              <input name="link" type="url" required placeholder="https://… (página do jogo, da loja ou do evento)" />
+            </label>
+            <div class="linha2">
+              <label>Loja
+                <select name="lojaId" id="manual-loja"><option value="">Outra (digitar ao lado)</option></select>
+              </label>
+              <label id="campo-loja-nome">Nome da loja/origem
+                <input name="lojaNome" maxlength="40" placeholder="ex.: Nuuvem, PlayStation Store" />
+              </label>
+            </div>
+            <div class="linha2">
+              <label>Preço normal (R$) <span class="secao-nota">— opcional</span>
+                <input name="precoNormal" type="number" min="0.01" step="0.01" inputmode="decimal" />
+              </label>
+              <label>Preço com desconto (R$)
+                <input name="precoPromocional" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0 = grátis" />
+              </label>
+            </div>
+            <div class="linha2">
+              <label>Texto do botão
+                <input name="textoBotao" maxlength="24" placeholder="Ver oferta" />
+              </label>
+              <label>Termina em <span class="secao-nota">— some sozinho depois</span>
+                <input name="termina" type="date" />
+              </label>
+            </div>
+            <label>Comentário
+              <textarea name="comentario" maxlength="140" placeholder="Aparece no cartão e no banner"></textarea>
+            </label>
+            <fieldset class="opcoes-exibir">
+              <legend>Onde aparece</legend>
+              <label><input type="radio" name="exibir" value="ambos" checked /> Banner e faixa</label>
+              <label><input type="radio" name="exibir" value="banner" /> Só no banner</label>
+              <label><input type="radio" name="exibir" value="faixa" /> Só na faixa</label>
+            </fieldset>
+            <label class="check"><input name="ativo" type="checkbox" checked /> Ativo (aparece na vitrine)</label>
+            <p class="mensagem" id="msg-manual" role="status"></p>
+            <div class="form-acoes">
+              <button class="botao" type="submit" id="salvar-manual">Adicionar aos destaques</button>
+              <button class="botao secundario" type="button" id="cancelar-manual" hidden>Cancelar edição</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="caixa previa-manual">
+          <h2>Pré-visualização</h2>
+          <p class="secao-nota" style="margin:-6px 0 12px">Como vai aparecer na vitrine.</p>
+          <div class="previa-banner billboard" id="previa-banner"></div>
+          <div class="previa-cartao" id="previa-cartao"></div>
         </section>
       </main>
 

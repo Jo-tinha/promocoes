@@ -18,11 +18,12 @@ function renderizarTopo(usuario, admin, pagina) {
   const nav = usuario
     ? [
         link('/', 'Vitrine', pagina === 'vitrine'),
+        link('/busca.html', 'Explorar', pagina === 'busca'),
         link('/jogos.html', 'Games', pagina === 'games'),
         link('/notificar.html', 'Avisos', pagina === 'notificar', ' <span class="contador" id="sino" hidden></span>'),
         admin ? link('/admin.html', 'Painel', pagina === 'admin') : '',
       ].join('')
-    : link('/', 'Vitrine', pagina === 'vitrine') + link('/jogos.html', 'Games', pagina === 'games');
+    : link('/', 'Vitrine', pagina === 'vitrine') + link('/busca.html', 'Explorar', pagina === 'busca') + link('/jogos.html', 'Games', pagina === 'games');
 
   const conta = usuario
     ? `<span class="usuario-email" title="${esc(usuario.email)}">${esc(usuario.displayName || usuario.email)}</span>
