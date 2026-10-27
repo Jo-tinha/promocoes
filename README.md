@@ -3,7 +3,7 @@
 Aplicação web de ofertas de produtos — Projeto integrador, Atividade 2.
 
 - **Ofertas oficiais**: cadastradas por um administrador, com CRUD completo no **Firebase Firestore**.
-- **Catálogo de produtos**: obtido em tempo real da API pública **[DummyJSON](https://dummyjson.com/docs/products)**, com preços convertidos para reais pela cotação do dólar da **[AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas)**.
+- **Promoções nas lojas**: promoções reais de jogos de PC (Steam, Epic, GOG, Humble e outras) obtidas em tempo real da API pública **[CheapShark](https://www.cheapshark.com)**, com preços convertidos para reais pela cotação do dólar da **[AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas)**.
 - **Publicação**: Vercel (`.vercel.app`).
 
 ## Requisitos da atividade
@@ -14,7 +14,7 @@ Aplicação web de ofertas de produtos — Projeto integrador, Atividade 2.
 | R — Consultar | Vitrine (`/`) e tabela do painel → `getDocs` |
 | U — Atualizar | Botão **Editar** (e Ativar/Desativar) → `updateDoc` |
 | D — Excluir | Botão **Excluir**, com confirmação → `deleteDoc` |
-| API externa | `src/api.js` — DummyJSON (produtos, busca, categorias) e AwesomeAPI (USD-BRL) |
+| API externa | `src/api.js` — CheapShark (`/deals` promoções e busca, `/stores` lojas) e AwesomeAPI (USD-BRL) |
 | Publicação | Vercel, endereço `https://<projeto>.vercel.app` |
 
 ## Estrutura

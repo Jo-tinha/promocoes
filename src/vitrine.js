@@ -1,16 +1,17 @@
 import './style.css';
 import { listarOfertas, ofertaVigente } from './ofertas.js';
 import { firebaseConfigurado } from './firebase.js';
-import { buscarProdutos, buscarCategorias, buscarCotacaoDolar } from './api.js';
+import { buscarPromocoes, buscarLojas, buscarCotacaoDolar } from './api.js';
 import { formatarReal, percentualDesconto, esc, formatarData, IMAGEM_PADRAO } from './util.js';
 
 const gradeOficiais = document.querySelector('#grade-oficiais');
 const gradeCatalogo = document.querySelector('#grade-catalogo');
 const elCotacao = document.querySelector('#cotacao');
 const campoBusca = document.querySelector('#busca');
-const campoCategoria = document.querySelector('#categoria');
+const campoLoja = document.querySelector('#loja');
 
 let cotacao = null; // valor do dólar em reais
+const lojas = new Map(); // id da loja → { nome, icone }
 
 // ---------- Ofertas oficiais (Firestore) ----------
 function cartaoOficial(o) {
@@ -52,49 +53,49 @@ async function carregarOficiais() {
   }
 }
 
-// ---------- Catálogo (APIs públicas) ----------
+// ---------- Promoções das lojas (CheapShark + AwesomeAPI) ----------
 function precoEmReal(dolar) {
+  if (dolar === 0) return 'Grátis';
   return cotacao ? formatarReal(dolar * cotacao) : `US$ ${dolar.toFixed(2)}`;
 }
 
-function cartaoProduto(p) {
-  const desconto = p.discountPercentage || 0;
-  const original = p.price / (1 - desconto / 100);
+function cartaoPromocao(p) {
+  const loja = lojas.get(p.lojaId);
   return `
-    <article class="cartao">
-      <div class="cartao-imagem">
-        <img src="${esc(p.thumbnail)}" alt="${esc(p.title)}" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
-        ${desconto >= 1 ? `<span class="selo selo-desconto">-${Math.round(desconto)}%</span>` : ''}
+    <a class="cartao cartao-link" href="${esc(p.link)}" target="_blank" rel="noopener sponsored">
+      <div class="cartao-imagem imagem-jogo">
+        <img src="${esc(p.imagem)}" alt="${esc(p.titulo)}" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
+        ${p.desconto >= 1 ? `<span class="selo selo-desconto">-${p.desconto}%</span>` : ''}
       </div>
       <div class="cartao-corpo">
-        <span class="categoria">${esc(p.category)}${p.brand ? ` · ${esc(p.brand)}` : ''}</span>
-        <h3>${esc(p.title)}</h3>
-        <p class="descricao">${esc(p.description)}</p>
+        <span class="categoria loja">
+          ${loja ? `<img src="${esc(loja.icone)}" alt="" width="16" height="16" />${esc(loja.nome)}` : 'Loja parceira'}
+        </span>
+        <h3>${esc(p.titulo)}</h3>
+        ${p.avaliacao ? `<p class="descricao">Steam: ${esc(p.avaliacao)}</p>` : ''}
         <div class="precos">
-          ${desconto >= 1 ? `<span class="preco-antigo">${precoEmReal(original)}</span>` : ''}
-          <span class="preco-final">${precoEmReal(p.price)}</span>
+          ${p.desconto >= 1 ? `<span class="preco-antigo">${precoEmReal(p.precoNormal)}</span>` : ''}
+          <span class="preco-final">${precoEmReal(p.precoPromocional)}</span>
         </div>
+        <span class="validade">Ver na loja →</span>
       </div>
-    </article>`;
+    </a>`;
 }
 
 let requisicaoAtual = 0;
-async function carregarCatalogo() {
+async function carregarPromocoes() {
   const id = ++requisicaoAtual; // ignora respostas antigas se o usuário digitar rápido
   gradeCatalogo.classList.add('carregando');
   try {
-    const termo = campoBusca.value.trim();
-    const categoria = campoCategoria.value;
-    let produtos = await buscarProdutos({ termo, categoria });
-    if (termo && categoria) produtos = produtos.filter((p) => p.category === categoria);
+    const promocoes = await buscarPromocoes({ termo: campoBusca.value.trim(), lojaId: campoLoja.value });
     if (id !== requisicaoAtual) return;
-    gradeCatalogo.innerHTML = produtos.length
-      ? produtos.map(cartaoProduto).join('')
-      : '<div class="aviso">Nenhum produto encontrado para essa busca.</div>';
+    gradeCatalogo.innerHTML = promocoes.length
+      ? promocoes.map(cartaoPromocao).join('')
+      : '<div class="aviso">Nenhuma promoção encontrada para essa busca.</div>';
   } catch (erro) {
     console.error(erro);
     if (id === requisicaoAtual) {
-      gradeCatalogo.innerHTML = '<div class="aviso erro">Não foi possível carregar o catálogo agora. Tente recarregar a página.</div>';
+      gradeCatalogo.innerHTML = '<div class="aviso erro">Não foi possível carregar as promoções agora. Tente recarregar a página.</div>';
     }
   } finally {
     if (id === requisicaoAtual) gradeCatalogo.classList.remove('carregando');
@@ -109,19 +110,20 @@ async function carregarCotacao() {
     elCotacao.innerHTML = `Dólar hoje: <strong>${formatarReal(valor)}</strong><span>${hora}</span>`;
   } catch (erro) {
     console.error(erro);
-    elCotacao.textContent = 'Cotação indisponível: preços do catálogo exibidos em dólar.';
+    elCotacao.textContent = 'Cotação indisponível: preços das promoções exibidos em dólar.';
   }
 }
 
-async function carregarCategorias() {
+async function carregarLojas() {
   try {
-    const categorias = await buscarCategorias();
-    campoCategoria.insertAdjacentHTML(
+    const lista = await buscarLojas();
+    lista.forEach((l) => lojas.set(l.id, l));
+    campoLoja.insertAdjacentHTML(
       'beforeend',
-      categorias.map((c) => `<option value="${esc(c)}">${esc(c.replaceAll('-', ' '))}</option>`).join(''),
+      lista.map((l) => `<option value="${esc(l.id)}">${esc(l.nome)}</option>`).join(''),
     );
   } catch (erro) {
-    console.error(erro);
+    console.error(erro); // sem a lista, os cartões aparecem como "Loja parceira"
   }
 }
 
@@ -129,15 +131,14 @@ async function carregarCategorias() {
 let espera;
 campoBusca.addEventListener('input', () => {
   clearTimeout(espera);
-  espera = setTimeout(carregarCatalogo, 350);
+  espera = setTimeout(carregarPromocoes, 400);
 });
-campoCategoria.addEventListener('change', carregarCatalogo);
+campoLoja.addEventListener('change', carregarPromocoes);
 document.querySelector('#filtros').addEventListener('submit', (e) => {
   e.preventDefault();
-  carregarCatalogo();
+  carregarPromocoes();
 });
 
-// As duas fontes carregam em paralelo; o catálogo espera a cotação para mostrar preços em reais
+// Ofertas oficiais carregam em paralelo; as promoções esperam a cotação e as lojas para já mostrar R$ e o nome da loja
 carregarOficiais();
-carregarCategorias();
-carregarCotacao().then(carregarCatalogo);
+Promise.all([carregarCotacao(), carregarLojas()]).then(carregarPromocoes);

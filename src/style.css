@@ -87,6 +87,15 @@ a { color: inherit; }
 
 .oficiais .grade .cartao { border-color: #c8e0d7; }
 
+/* Cartões de promoção da CheapShark: o cartão inteiro é um link para a loja */
+.cartao-link { text-decoration: none; color: inherit; }
+.cartao-link:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }
+.imagem-jogo { aspect-ratio: 460 / 215; background: #1d1a16; }
+.imagem-jogo img { object-fit: contain; }
+.categoria.loja { display: flex; align-items: center; gap: 6px; }
+.categoria.loja img { width: 16px; height: 16px; border-radius: 3px; }
+.cartao-link .validade { color: var(--destaque-escuro); font-weight: 600; }
+
 /* Estados */
 .aviso { padding: 18px; border: 1px dashed var(--linha); border-radius: var(--raio); color: var(--tinta-suave); background: var(--cartao); grid-column: 1 / -1; text-align: center; }
 .aviso.erro { border-color: #f1c4bd; color: var(--perigo); }

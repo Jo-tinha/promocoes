@@ -1,9 +1,8 @@
 // APIs públicas e gratuitas, sem chave:
-// - DummyJSON: catálogo de produtos (preços em dólar)
+// - CheapShark: promoções reais de jogos de PC em lojas como Steam, Epic, GOG e Humble (preços em dólar)
 // - AwesomeAPI: cotação atual do dólar em reais
 
-const DUMMY = 'https://dummyjson.com';
-const CAMPOS = 'title,description,category,price,discountPercentage,thumbnail,rating,brand';
+const CHEAPSHARK = 'https://www.cheapshark.com';
 
 async function getJson(url) {
   const resp = await fetch(url);
@@ -11,18 +10,36 @@ async function getJson(url) {
   return resp.json();
 }
 
-export async function buscarProdutos({ termo = '', categoria = '', limite = 30 } = {}) {
-  let url;
-  if (termo) url = `${DUMMY}/products/search?q=${encodeURIComponent(termo)}&limit=${limite}&select=${CAMPOS}`;
-  else if (categoria) url = `${DUMMY}/products/category/${encodeURIComponent(categoria)}?limit=${limite}&select=${CAMPOS}`;
-  else url = `${DUMMY}/products?limit=${limite}&select=${CAMPOS}&sortBy=discountPercentage&order=desc`;
-  const dados = await getJson(url);
-  return dados.products;
+// Promoções atuais. Sem filtros, traz as de maior desconto.
+export async function buscarPromocoes({ termo = '', lojaId = '', limite = 36 } = {}) {
+  const params = new URLSearchParams({
+    onSale: '1',
+    pageSize: String(limite),
+    sortBy: termo ? 'Deal Rating' : 'Savings',
+  });
+  if (termo) params.set('title', termo);
+  if (lojaId) params.set('storeID', lojaId);
+  const promocoes = await getJson(`${CHEAPSHARK}/api/1.0/deals?${params}`);
+  return promocoes.map((p) => ({
+    id: p.dealID,
+    titulo: p.title,
+    lojaId: p.storeID,
+    precoNormal: Number(p.normalPrice),
+    precoPromocional: Number(p.salePrice),
+    desconto: Math.round(Number(p.savings)),
+    imagem: p.thumb,
+    avaliacao: p.steamRatingText || '',
+    link: `${CHEAPSHARK}/redirect?dealID=${encodeURIComponent(p.dealID)}`,
+  }));
 }
 
-export async function buscarCategorias() {
-  const lista = await getJson(`${DUMMY}/products/category-list`);
-  return lista;
+// Lojas acompanhadas pela CheapShark (só as ativas)
+export async function buscarLojas() {
+  const lojas = await getJson(`${CHEAPSHARK}/api/1.0/stores`);
+  return lojas
+    .filter((l) => l.isActive)
+    .map((l) => ({ id: l.storeID, nome: l.storeName, icone: `${CHEAPSHARK}${l.images.icon}` }))
+    .sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
 export async function buscarCotacaoDolar() {
