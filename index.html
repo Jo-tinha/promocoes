@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0d0f14" />
-    <meta name="description" content="Buba Promo: promoções de jogos de PC loja por loja, com preços em reais." />
+    <meta name="description" content="Buba Promo: promoções de jogos de PC loja por loja, destaques escolhidos a dedo e jogos grátis, com preços em reais." />
     <title>Buba Promo</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff5c35'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3EB%3C/text%3E%3C/svg%3E" />
   </head>
@@ -12,47 +12,59 @@
     <header class="topo" id="topo"></header>
 
     <main>
-      <section class="abertura container">
-        <h1>Promoções de jogos, <em>loja por loja.</em></h1>
-        <p>Ofertas da Steam, GOG, Epic, Humble e outras lojas, conferidas pela equipe do Buba Promo e com preços convertidos para reais.</p>
-        <div class="cotacao" id="cotacao">Buscando cotação do dólar…</div>
-        <div class="chamada" id="chamada">
-          <a href="/entrar.html">Entre ou crie sua conta</a> para ver as recomendações do dia e receber avisos quando os seus jogos entrarem em promoção.
+      <!-- Banner principal: destaques em rotação -->
+      <section class="billboard vazio" id="billboard" aria-label="Destaque principal">
+        <div class="container billboard-conteudo">
+          <h1>Promoções de jogos, <em style="font-style:normal;color:var(--destaque)">loja por loja.</em></h1>
+          <p>Carregando as melhores ofertas…</p>
         </div>
       </section>
 
-      <section class="secao recomendacoes container" id="sec-recomendacoes" aria-labelledby="titulo-recomendacoes" hidden>
-        <div class="secao-cabeca">
-          <h2 id="titulo-recomendacoes">Recomendações do dia</h2>
-          <p class="secao-nota" id="nota-recomendacoes">Jogos, notícias e eventos escolhidos pela equipe</p>
-        </div>
-        <div class="grade" id="grade-recomendacoes"></div>
-      </section>
+      <div class="container vitrine-layout">
+        <div class="principal">
+          <div class="barra-busca">
+            <input type="search" id="busca" placeholder="Buscar jogo em todas as lojas…" aria-label="Buscar jogo em todas as lojas" />
+            <span class="cotacao" id="cotacao" style="margin:0">Dólar: …</span>
+          </div>
+          <div class="chamada" id="chamada">
+            <a href="/entrar.html">Entre ou crie sua conta</a> para ver as recomendações do dia e receber avisos quando os seus jogos entrarem em promoção.
+          </div>
 
-      <section class="secao container" aria-labelledby="titulo-vitrine">
-        <div class="secao-cabeca">
-          <h2 id="titulo-vitrine">Vitrine</h2>
-          <p class="secao-nota">Preços da CheapShark · convertidos pela AwesomeAPI</p>
+          <section class="faixa" id="faixa-busca" hidden aria-labelledby="titulo-busca">
+            <div class="faixa-cabeca"><h2 id="titulo-busca">Resultados</h2><p id="nota-busca"></p></div>
+            <div class="trilho" id="trilho-busca"></div>
+          </section>
+
+          <section class="faixa faixa-destaques" id="faixa-destaques" aria-labelledby="titulo-destaques">
+            <div class="faixa-cabeca"><h2 id="titulo-destaques">Destaques</h2><p>Escolhidos a dedo pela equipe</p></div>
+            <div class="trilho" id="trilho-destaques"></div>
+          </section>
+
+          <section class="faixa" id="faixa-recomendacoes" hidden aria-labelledby="titulo-recs">
+            <div class="faixa-cabeca"><h2 id="titulo-recs">Recomendações do dia</h2><p id="nota-recs">Jogos, notícias e eventos</p></div>
+            <div class="trilho" id="trilho-recomendacoes"></div>
+          </section>
+
+          <div id="faixas-lojas"></div>
+          <div class="mais-lojas"><button class="botao secundario" type="button" id="mais-lojas" hidden>Mostrar mais lojas</button></div>
         </div>
-        <div class="lojas" id="lojas" role="group" aria-label="Filtrar por loja"></div>
-        <div class="filtros">
-          <input type="search" id="busca" placeholder="Buscar jogo na vitrine" aria-label="Buscar jogo na vitrine" />
-          <select id="ordem" aria-label="Ordenar">
-            <option value="recentes">Mais recentes</option>
-            <option value="desconto">Maior desconto</option>
-            <option value="preco">Menor preço</option>
-          </select>
-        </div>
-        <div class="grade" id="grade">
-          <div class="aviso">Carregando promoções…</div>
-        </div>
-      </section>
+
+        <aside class="coluna-gratis" aria-labelledby="titulo-gratis">
+          <h2 id="titulo-gratis"><span>●</span> Grátis agora</h2>
+          <p>Jogos de PC de graça por tempo limitado.</p>
+          <div class="lista-gratis" id="lista-gratis">
+            <div class="esqueleto" style="width:auto"></div>
+          </div>
+          <p class="credito">Brindes via <a href="https://www.gamerpower.com" target="_blank" rel="noopener">GamerPower.com</a> e CheapShark.</p>
+        </aside>
+      </div>
     </main>
 
     <footer class="rodape">
       <div class="container">
         Buba Promo — Projeto integrador, Atividade 2. Promoções:
         <a href="https://www.cheapshark.com" target="_blank" rel="noopener">CheapShark</a> ·
+        jogos grátis: <a href="https://www.gamerpower.com" target="_blank" rel="noopener">GamerPower</a> ·
         cotação: <a href="https://docs.awesomeapi.com.br/api-de-moedas" target="_blank" rel="noopener">AwesomeAPI</a>.
       </div>
     </footer>

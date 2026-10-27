@@ -10,13 +10,13 @@ service cloud.firestore {
       return logado() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
-    // Promoções aprovadas: a vitrine é pública; só o admin aprova, atualiza e remove
-    match /promocoes/{id} {
+    // Destaques escolhidos a dedo: a vitrine é pública; só o admin destaca, atualiza e remove
+    match /destaques/{id} {
       allow read: if true;
       allow create, update, delete: if admin();
     }
 
-    // Jogos que já estiveram em oferta: lista usada no Notificar
+    // Jogos que já foram destaque: parte da lista usada no Notificar
     match /jogos/{id} {
       allow read: if logado();
       allow create, update, delete: if admin();

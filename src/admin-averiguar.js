@@ -1,6 +1,7 @@
-// Abas "Averiguar promoções" e "Na vitrine": o admin decide quais promoções da CheapShark entram na aplicação
+// Abas "Averiguar promoções" e "Destaques": todas as promoções entram na vitrine automaticamente;
+// o admin averigua o que está chegando e escolhe a dedo as que viram destaque.
 import { buscarPromocoes, buscarPromocaoPorId } from './api.js';
-import { aprovarPromocao, listarPromocoes, atualizarPrecoPromocao, removerPromocao } from './promocoes.js';
+import { destacar, listarDestaques, atualizarDestaque, removerDestaque } from './destaques.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
 import { esc, IMAGEM_PADRAO } from './util.js';
 
@@ -14,7 +15,7 @@ const qtdVitrine = document.querySelector('#qtd-vitrine');
 const botaoAtualizarTodas = document.querySelector('#atualizar-todas');
 
 let chegando = []; // resultado atual da CheapShark
-let naVitrine = []; // promoções aprovadas (Firestore)
+let naVitrine = []; // destaques (Firestore)
 const aprovadas = () => new Set(naVitrine.map((p) => p.dealID));
 
 // ---------- Averiguar ----------
@@ -33,8 +34,8 @@ function linhaChegando(p, jaAprovada) {
       <div class="acoes-linha">
         ${
           jaAprovada
-            ? '<span class="status ok">Na vitrine</span>'
-            : `<button class="botao pequeno" type="button" data-aprovar="${esc(p.dealID)}">Aprovar</button>`
+            ? '<span class="status ok">★ Destaque</span>'
+            : `<button class="botao pequeno" type="button" data-aprovar="${esc(p.dealID)}">★ Destacar</button>`
         }
       </div>
     </div>`;
@@ -45,7 +46,7 @@ function renderizarChegando() {
   const soNovas = formFiltros.elements.soNovas.checked;
   const lista = chegando.filter((p) => !soNovas || !ja.has(p.dealID));
   const pendentes = chegando.filter((p) => !ja.has(p.dealID)).length;
-  notaAveriguar.textContent = `${chegando.length} promoções encontradas · ${pendentes} ainda fora da vitrine.`;
+  notaAveriguar.textContent = `${chegando.length} promoções chegando (todas já aparecem na vitrine) · ${chegando.length - pendentes} em destaque.`;
   listaAveriguar.innerHTML = lista.length
     ? lista.map((p) => linhaChegando(p, ja.has(p.dealID))).join('')
     : '<div class="aviso">Nada novo por aqui com esses filtros.</div>';
@@ -65,12 +66,12 @@ async function buscarChegando() {
 
 // ---------- Na vitrine ----------
 function linhaVitrine(p) {
-  const aprovada = p.aprovadoEm ? p.aprovadoEm.toDate().toLocaleDateString('pt-BR') : '—';
+  const aprovada = p.criadoEm ? p.criadoEm.toDate().toLocaleDateString('pt-BR') : '—';
   const ativa = p.precoPromocional < p.precoNormal;
   return `
     <tr>
       <td><img class="miniatura" src="${esc(p.imagem)}" alt="" onerror="this.src='${IMAGEM_PADRAO}'" /></td>
-      <td><a href="${esc(p.link)}" target="_blank" rel="noopener"><strong>${esc(p.titulo)}</strong></a><br /><span class="secao-nota">${esc(nomeDaLoja(p.lojaId))}</span></td>
+      <td><a href="${esc(p.link)}" target="_blank" rel="noopener"><strong>${esc(p.titulo)}</strong></a><br /><span class="secao-nota">${esc(nomeDaLoja(p.lojaId))}${p.comentario ? ` · “${esc(p.comentario)}”` : ''}</span></td>
       <td><span class="preco-antigo">${precoEmReal(p.precoNormal)}</span><br />${precoEmReal(p.precoPromocional)} <span class="secao-nota">(-${p.desconto}%)</span></td>
       <td>${aprovada}</td>
       <td><span class="status ${ativa ? 'ok' : 'off'}">${ativa ? 'Em promoção' : 'Encerrada'}</span></td>
@@ -85,13 +86,13 @@ function linhaVitrine(p) {
 
 export async function carregarVitrineAdmin() {
   try {
-    naVitrine = await listarPromocoes();
+    naVitrine = await listarDestaques();
     qtdVitrine.hidden = naVitrine.length === 0;
     qtdVitrine.textContent = naVitrine.length;
-    notaVitrine.textContent = `${naVitrine.length} ${naVitrine.length === 1 ? 'promoção' : 'promoções'} visíveis para o público.`;
+    notaVitrine.textContent = `${naVitrine.length} ${naVitrine.length === 1 ? 'destaque' : 'destaques'} no topo da vitrine (os 5 primeiros giram no banner).`;
     listaVitrine.innerHTML = naVitrine.length
       ? naVitrine.map(linhaVitrine).join('')
-      : '<tr><td colspan="6">Nenhuma promoção aprovada ainda. Use a aba "Averiguar promoções".</td></tr>';
+      : '<tr><td colspan="6">Nenhum destaque ainda. Use a aba "Averiguar promoções".</td></tr>';
   } catch (erro) {
     console.error(erro);
     listaVitrine.innerHTML = '<tr><td colspan="6" class="mensagem erro">Erro ao carregar a vitrine.</td></tr>';
@@ -100,7 +101,7 @@ export async function carregarVitrineAdmin() {
 
 async function atualizarPreco(p) {
   const precos = await buscarPromocaoPorId(p.dealID);
-  await atualizarPrecoPromocao(p.id, {
+  await atualizarDestaque(p.id, {
     precoNormal: precos.precoNormal,
     precoPromocional: precos.precoPromocional,
     desconto: precos.desconto,
@@ -128,13 +129,18 @@ export async function iniciarAveriguar() {
     if (!botao) return;
     const promo = chegando.find((p) => p.dealID === botao.dataset.aprovar);
     botao.disabled = true;
+    const comentario = prompt(`Por que "${promo.titulo}" merece destaque? (opcional, aparece no cartão)`, '');
+    if (comentario === null) {
+      botao.disabled = false;
+      return;
+    }
     try {
-      await aprovarPromocao(promo);
+      await destacar(promo, comentario.slice(0, 140));
       await carregarVitrineAdmin();
       renderizarChegando();
     } catch (erro) {
       console.error(erro);
-      alert('Não foi possível aprovar. Confira se sua conta está na coleção "admins".');
+      alert('Não foi possível destacar. Confira se sua conta está na coleção "admins".');
       botao.disabled = false;
     }
   });
@@ -149,15 +155,15 @@ export async function iniciarAveriguar() {
     botao.disabled = true;
     try {
       if (botao.dataset.remover) {
-        if (!confirm(`Remover "${promo.titulo}" da vitrine?`)) {
+        if (!confirm(`Tirar "${promo.titulo}" dos destaques?`)) {
           botao.disabled = false;
           return;
         }
-        await removerPromocao(id);
+        await removerDestaque(id);
       } else {
         const continua = await atualizarPreco(promo);
-        if (!continua && confirm(`A promoção de "${promo.titulo}" terminou. Remover da vitrine?`)) {
-          await removerPromocao(id);
+        if (!continua && confirm(`A promoção de "${promo.titulo}" terminou. Tirar dos destaques?`)) {
+          await removerDestaque(id);
         }
       }
       await carregarVitrineAdmin();

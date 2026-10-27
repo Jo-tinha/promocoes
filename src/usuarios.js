@@ -12,7 +12,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase.js';
-import { listarPromocoesDosJogos } from './promocoes.js';
+import { buscarOfertasDosJogos } from './api.js';
 
 // Admin = existe um documento admins/{uid}, criado à mão no console do Firebase
 export async function ehAdmin(uid) {
@@ -63,23 +63,27 @@ export async function deixarDeSeguir(uid, gameID) {
   return deleteDoc(doc(colSeguindo(uid), gameID));
 }
 
-// ---------- Avisos: promoções aprovadas dos jogos seguidos ----------
+// ---------- Avisos: promoções atuais (CheapShark) dos jogos seguidos ----------
 // precoEmReais: função que converte dólar → reais (ou null se a cotação falhou)
 export async function buscarAvisos(uid, precoEmReais) {
   const [seguindo, perfil] = await Promise.all([listarSeguindo(uid), lerPerfil(uid)]);
   if (!seguindo.length) return { avisos: [], novos: 0 };
   const alvo = new Map(seguindo.map((s) => [s.gameID, s.precoAlvo]));
-  const lidosEm = perfil.avisosLidosEm?.toMillis() ?? 0;
-  const avisos = (await listarPromocoesDosJogos([...alvo.keys()]))
+  const vistos = new Set(perfil.avisosVistos || []);
+  const avisos = (await buscarOfertasDosJogos([...alvo.keys()]))
     .filter((p) => {
       const limite = alvo.get(p.gameID);
       const real = precoEmReais(p.precoPromocional);
       return !limite || real === null || real <= limite;
     })
-    .map((p) => ({ ...p, novo: (p.aprovadoEm?.toMillis() ?? 0) > lidosEm }));
+    .map((p) => ({ ...p, novo: !vistos.has(p.dealID) }))
+    .sort((a, b) => b.novo - a.novo || b.desconto - a.desconto);
   return { avisos, novos: avisos.filter((a) => a.novo).length };
 }
 
-export async function marcarAvisosComoLidos(uid) {
-  return setDoc(doc(db, 'usuarios', uid), { avisosLidosEm: serverTimestamp() }, { merge: true });
+// Guarda as promoções já vistas; só as que surgirem depois contam como novas
+export async function marcarAvisosComoLidos(uid, dealIDs) {
+  const perfil = await lerPerfil(uid);
+  const vistos = [...new Set([...(perfil.avisosVistos || []), ...dealIDs])].slice(-400);
+  return setDoc(doc(db, 'usuarios', uid), { avisosVistos: vistos, avisosLidosEm: serverTimestamp() }, { merge: true });
 }

@@ -1,7 +1,9 @@
 // Página "Notificar" (usuário logado): escolher jogos para acompanhar e ver os avisos de promoção
 import './style.css';
 import { iniciarSessao, atualizarSino } from './sessao.js';
-import { listarJogos } from './promocoes.js';
+import { listarJogos } from './destaques.js';
+import { buscarPromocoes } from './api.js';
+import { imagemGrande } from './lojas.js';
 import {
   listarSeguindo,
   seguirJogo,
@@ -26,6 +28,7 @@ const elFiltro = document.querySelector('#filtro-jogos');
 let uid = null;
 let jogos = [];
 let seguindo = new Map(); // gameID → documento seguido
+let avisosAtuais = [];
 
 // ---------- Avisos ----------
 function linhaAviso(a) {
@@ -47,6 +50,7 @@ function linhaAviso(a) {
 async function carregarAvisos() {
   try {
     const { avisos, novos } = await buscarAvisos(uid, dolarParaReal);
+    avisosAtuais = avisos;
     botaoLidos.hidden = novos === 0;
     if (!seguindo.size) {
       elNotaAvisos.textContent = 'Você ainda não acompanha nenhum jogo. Escolha abaixo.';
@@ -66,7 +70,7 @@ async function carregarAvisos() {
 botaoLidos.addEventListener('click', async () => {
   botaoLidos.disabled = true;
   try {
-    await marcarAvisosComoLidos(uid);
+    await marcarAvisosComoLidos(uid, avisosAtuais.map((a) => a.dealID));
     await carregarAvisos();
     atualizarSino(uid);
   } finally {
@@ -80,10 +84,10 @@ function itemJogo(j) {
   const data = j.ultimaPromocaoEm ? j.ultimaPromocaoEm.toDate().toLocaleDateString('pt-BR') : '';
   return `
     <div class="jogo-item${seg ? ' seguindo' : ''}">
-      <img src="${esc(j.imagem)}" alt="" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
+      <img src="${esc(imagemGrande(j.imagem))}" alt="" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
       <div style="min-width:0">
         <strong title="${esc(j.titulo)}">${esc(j.titulo)}</strong>
-        <small>${data ? `Última oferta em ${data}` : ''}</small>
+        <small>${j.emOfertaAgora ? `Em oferta agora · -${j.desconto}%` : data ? `Última oferta em ${data}` : ''}</small>
         ${
           seg
             ? `<label class="preco-alvo">Avisar até R$
@@ -103,7 +107,7 @@ function renderizarJogos() {
   const lista = jogos
     .filter((j) => elFiltro.value !== 'seguindo' || seguindo.has(j.gameID))
     .filter((j) => !termo || j.titulo.toLowerCase().includes(termo));
-  elNotaJogos.textContent = `Jogos que já estiveram em oferta no Buba Promo · você acompanha ${seguindo.size} de ${jogos.length}.`;
+  elNotaJogos.textContent = `Jogos em oferta agora e que já foram destaque · você acompanha ${seguindo.size} de ${jogos.length}.`;
   elListaJogos.innerHTML = lista.length
     ? lista.map(itemJogo).join('')
     : `<div class="aviso">${jogos.length ? 'Nenhum jogo encontrado.' : 'Ainda não há jogos na lista. Eles aparecem quando entram em oferta no Buba Promo.'}</div>`;
@@ -154,6 +158,43 @@ elListaJogos.addEventListener('change', async (e) => {
   }
 });
 
+// Junta: jogos já destacados + jogos em oferta agora + jogos que o usuário já acompanha (sem repetir)
+function juntarJogos(...fontes) {
+  const mapa = new Map();
+  for (const lista of fontes) {
+    for (const j of lista) {
+      if (!j.gameID) continue;
+      const atual = mapa.get(j.gameID) || {};
+      mapa.set(j.gameID, {
+        ...j,
+        ...atual,
+        imagem: atual.imagem || j.imagem,
+        emOfertaAgora: atual.emOfertaAgora || j.precoPromocional !== undefined,
+        desconto: atual.desconto ?? j.desconto,
+      });
+    }
+  }
+  return [...mapa.values()].sort((a, b) => a.titulo.localeCompare(b.titulo));
+}
+
+// Busca ao vivo: ao digitar, procura também na CheapShark jogos que estão em oferta
+let espera;
+elBusca.addEventListener('input', () => {
+  clearTimeout(espera);
+  const termo = elBusca.value.trim();
+  if (termo.length < 3) return;
+  espera = setTimeout(async () => {
+    try {
+      const achados = await buscarPromocoes({ termo, limite: 30 });
+      const antes = jogos.length;
+      jogos = juntarJogos(jogos, achados);
+      if (jogos.length !== antes) renderizarJogos();
+    } catch (erro) {
+      console.error(erro);
+    }
+  }, 500);
+});
+
 // ---------- Início ----------
 iniciarSessao('notificar', async ({ usuario }) => {
   elPrecisaLogin.hidden = Boolean(usuario);
@@ -163,8 +204,12 @@ iniciarSessao('notificar', async ({ usuario }) => {
   elListaJogos.innerHTML = '<div class="aviso">Carregando jogos…</div>';
   try {
     await carregarContexto();
-    const [listaJogos, listaSeguindo] = await Promise.all([listarJogos(), listarSeguindo(uid)]);
-    jogos = listaJogos;
+    const [listaJogos, listaSeguindo, emOferta] = await Promise.all([
+      listarJogos().catch(() => []),
+      listarSeguindo(uid),
+      buscarPromocoes({ ordem: 'Deal Rating', limite: 60 }).catch(() => []),
+    ]);
+    jogos = juntarJogos(listaJogos, emOferta, listaSeguindo);
     seguindo = new Map(listaSeguindo.map((s) => [s.gameID, s]));
     renderizarJogos();
     carregarAvisos();

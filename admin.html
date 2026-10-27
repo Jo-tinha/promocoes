@@ -22,7 +22,7 @@
     <div id="painel" hidden>
       <nav class="abas container" role="tablist" aria-label="Seções do painel">
         <button class="aba" role="tab" data-aba="averiguar" aria-selected="true">Averiguar promoções</button>
-        <button class="aba" role="tab" data-aba="vitrine" aria-selected="false">Na vitrine <span class="contador" id="qtd-vitrine" hidden></span></button>
+        <button class="aba" role="tab" data-aba="vitrine" aria-selected="false">Destaques <span class="contador" id="qtd-vitrine" hidden></span></button>
         <button class="aba" role="tab" data-aba="recomendacoes" aria-selected="false">Recomendações diárias</button>
       </nav>
 
@@ -32,7 +32,7 @@
           <div class="secao-cabeca">
             <div>
               <h2 style="margin:0">Promoções chegando</h2>
-              <p class="secao-nota" id="nota-averiguar">Promoções atuais da CheapShark. Aprove as que devem entrar na vitrine.</p>
+              <p class="secao-nota" id="nota-averiguar">Promoções atuais da CheapShark. Todas já entram na vitrine; destaque as melhores.</p>
             </div>
           </div>
           <form class="filtros" id="filtros-averiguar">
@@ -44,7 +44,7 @@
               <option value="Deal Rating">Melhor custo-benefício</option>
             </select>
             <label class="secao-nota" style="display:flex;align-items:center;gap:6px">
-              <input type="checkbox" name="soNovas" checked style="width:auto" /> Só as que não estão na vitrine
+              <input type="checkbox" name="soNovas" style="width:auto" /> Esconder as que já são destaque
             </label>
             <button class="botao secundario" type="submit">Buscar</button>
           </form>
@@ -57,7 +57,7 @@
         <section class="caixa">
           <div class="secao-cabeca">
             <div>
-              <h2 style="margin:0">Promoções na vitrine</h2>
+              <h2 style="margin:0">Destaques escolhidos a dedo</h2>
               <p class="secao-nota" id="nota-vitrine"></p>
             </div>
             <button class="botao secundario pequeno" type="button" id="atualizar-todas">Atualizar todos os preços</button>
@@ -65,7 +65,7 @@
           <div class="tabela-wrap">
             <table>
               <thead>
-                <tr><th></th><th>Jogo</th><th>Preço</th><th>Aprovada em</th><th>Situação</th><th>Ações</th></tr>
+                <tr><th></th><th>Jogo</th><th>Preço</th><th>Destacado em</th><th>Situação</th><th>Ações</th></tr>
               </thead>
               <tbody id="lista-vitrine"></tbody>
             </table>
