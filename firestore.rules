@@ -1,10 +1,21 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Qualquer visitante lê as ofertas; só o administrador logado cria, edita e exclui
+    // Ofertas oficiais: qualquer visitante lê; só o administrador logado cria, edita e exclui
     match /ofertas/{id} {
       allow read: if true;
       allow create, update, delete: if request.auth != null;
+    }
+
+    // Recomendações: aparecem na vitrine, mas só o administrador mexe
+    match /recomendacoes/{id} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null;
+    }
+
+    // Catálogo "notificar" (alertas da inspeção diária): só o administrador vê e mexe
+    match /notificar/{id} {
+      allow read, create, update, delete: if request.auth != null;
     }
   }
 }

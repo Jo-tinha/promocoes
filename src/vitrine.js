@@ -1,17 +1,19 @@
 import './style.css';
 import { listarOfertas, ofertaVigente } from './ofertas.js';
+import { listarRecomendacoes } from './recomendacoes.js';
 import { firebaseConfigurado } from './firebase.js';
-import { buscarPromocoes, buscarLojas, buscarCotacaoDolar } from './api.js';
+import { buscarPromocoes } from './api.js';
+import { contexto, carregarContexto, precoEmReal, nomeDaLoja, iconeDaLoja } from './contexto.js';
 import { formatarReal, percentualDesconto, esc, formatarData, IMAGEM_PADRAO } from './util.js';
 
 const gradeOficiais = document.querySelector('#grade-oficiais');
+const gradeRecomendacoes = document.querySelector('#grade-recomendacoes');
 const gradeCatalogo = document.querySelector('#grade-catalogo');
 const elCotacao = document.querySelector('#cotacao');
 const campoBusca = document.querySelector('#busca');
 const campoLoja = document.querySelector('#loja');
 
-let cotacao = null; // valor do dólar em reais
-const lojas = new Map(); // id da loja → { nome, icone }
+const AVISO_FIREBASE = '<div class="aviso erro">Firebase não configurado. Preencha as variáveis de ambiente (veja o README).</div>';
 
 // ---------- Ofertas oficiais (Firestore) ----------
 function cartaoOficial(o) {
@@ -39,7 +41,7 @@ function cartaoOficial(o) {
 
 async function carregarOficiais() {
   if (!firebaseConfigurado) {
-    gradeOficiais.innerHTML = '<div class="aviso erro">Firebase não configurado. Preencha as variáveis de ambiente (veja o README).</div>';
+    gradeOficiais.innerHTML = AVISO_FIREBASE;
     return;
   }
   try {
@@ -53,35 +55,50 @@ async function carregarOficiais() {
   }
 }
 
-// ---------- Promoções das lojas (CheapShark + AwesomeAPI) ----------
-function precoEmReal(dolar) {
-  if (dolar === 0) return 'Grátis';
-  return cotacao ? formatarReal(dolar * cotacao) : `US$ ${dolar.toFixed(2)}`;
-}
-
-function cartaoPromocao(p) {
-  const loja = lojas.get(p.lojaId);
+// ---------- Cartão de promoção (usado nas recomendações e nas promoções da API) ----------
+function cartaoPromocao(p, comentario = null) {
+  const icone = iconeDaLoja(p.lojaId);
   return `
     <a class="cartao cartao-link" href="${esc(p.link)}" target="_blank" rel="noopener sponsored">
       <div class="cartao-imagem imagem-jogo">
         <img src="${esc(p.imagem)}" alt="${esc(p.titulo)}" loading="lazy" onerror="this.src='${IMAGEM_PADRAO}'" />
+        ${comentario !== null ? '<span class="selo">Recomendado</span>' : ''}
         ${p.desconto >= 1 ? `<span class="selo selo-desconto">-${p.desconto}%</span>` : ''}
       </div>
       <div class="cartao-corpo">
         <span class="categoria loja">
-          ${loja ? `<img src="${esc(loja.icone)}" alt="" width="16" height="16" />${esc(loja.nome)}` : 'Loja parceira'}
+          ${icone ? `<img src="${esc(icone)}" alt="" width="16" height="16" />` : ''}${esc(nomeDaLoja(p.lojaId))}
         </span>
         <h3>${esc(p.titulo)}</h3>
-        ${p.avaliacao ? `<p class="descricao">Steam: ${esc(p.avaliacao)}</p>` : ''}
+        ${comentario ? `<p class="comentario-admin">“${esc(comentario)}”</p>` : ''}
+        ${!comentario && p.avaliacao ? `<p class="descricao">Steam: ${esc(p.avaliacao)}</p>` : ''}
         <div class="precos">
           ${p.desconto >= 1 ? `<span class="preco-antigo">${precoEmReal(p.precoNormal)}</span>` : ''}
           <span class="preco-final">${precoEmReal(p.precoPromocional)}</span>
         </div>
-        <span class="validade">Ver na loja →</span>
+        <span class="validade">${comentario !== null ? 'Preço quando recomendado · ' : ''}Ver na loja →</span>
       </div>
     </a>`;
 }
 
+// ---------- Recomendações (Firestore, escolhidas pelo admin) ----------
+async function carregarRecomendacoes() {
+  if (!firebaseConfigurado) {
+    gradeRecomendacoes.innerHTML = AVISO_FIREBASE;
+    return;
+  }
+  try {
+    const lista = await listarRecomendacoes();
+    gradeRecomendacoes.innerHTML = lista.length
+      ? lista.map((r) => cartaoPromocao({ ...r, id: r.dealID }, r.comentario || '')).join('')
+      : '<div class="aviso">Ainda não há recomendações. Volte em breve!</div>';
+  } catch (erro) {
+    console.error(erro);
+    gradeRecomendacoes.innerHTML = '<div class="aviso erro">Não foi possível carregar as recomendações.</div>';
+  }
+}
+
+// ---------- Promoções nas lojas (CheapShark) ----------
 let requisicaoAtual = 0;
 async function carregarPromocoes() {
   const id = ++requisicaoAtual; // ignora respostas antigas se o usuário digitar rápido
@@ -90,7 +107,7 @@ async function carregarPromocoes() {
     const promocoes = await buscarPromocoes({ termo: campoBusca.value.trim(), lojaId: campoLoja.value });
     if (id !== requisicaoAtual) return;
     gradeCatalogo.innerHTML = promocoes.length
-      ? promocoes.map(cartaoPromocao).join('')
+      ? promocoes.map((p) => cartaoPromocao(p)).join('')
       : '<div class="aviso">Nenhuma promoção encontrada para essa busca.</div>';
   } catch (erro) {
     console.error(erro);
@@ -102,29 +119,17 @@ async function carregarPromocoes() {
   }
 }
 
-async function carregarCotacao() {
-  try {
-    const { valor, atualizadoEm } = await buscarCotacaoDolar();
-    cotacao = valor;
-    const hora = atualizadoEm ? ` · ${atualizadoEm.slice(11, 16)}` : '';
-    elCotacao.innerHTML = `Dólar hoje: <strong>${formatarReal(valor)}</strong><span>${hora}</span>`;
-  } catch (erro) {
-    console.error(erro);
+function mostrarContexto() {
+  if (contexto.cotacao) {
+    const hora = contexto.atualizadoEm ? ` · ${contexto.atualizadoEm.slice(11, 16)}` : '';
+    elCotacao.innerHTML = `Dólar hoje: <strong>${formatarReal(contexto.cotacao)}</strong><span>${hora}</span>`;
+  } else {
     elCotacao.textContent = 'Cotação indisponível: preços das promoções exibidos em dólar.';
   }
-}
-
-async function carregarLojas() {
-  try {
-    const lista = await buscarLojas();
-    lista.forEach((l) => lojas.set(l.id, l));
-    campoLoja.insertAdjacentHTML(
-      'beforeend',
-      lista.map((l) => `<option value="${esc(l.id)}">${esc(l.nome)}</option>`).join(''),
-    );
-  } catch (erro) {
-    console.error(erro); // sem a lista, os cartões aparecem como "Loja parceira"
-  }
+  campoLoja.insertAdjacentHTML(
+    'beforeend',
+    [...contexto.lojas.values()].map((l) => `<option value="${esc(l.id)}">${esc(l.nome)}</option>`).join(''),
+  );
 }
 
 // Busca com pequena espera para não chamar a API a cada tecla
@@ -139,6 +144,10 @@ document.querySelector('#filtros').addEventListener('submit', (e) => {
   carregarPromocoes();
 });
 
-// Ofertas oficiais carregam em paralelo; as promoções esperam a cotação e as lojas para já mostrar R$ e o nome da loja
+// Ofertas oficiais carregam em paralelo; recomendações e promoções esperam a cotação e as lojas
 carregarOficiais();
-Promise.all([carregarCotacao(), carregarLojas()]).then(carregarPromocoes);
+carregarContexto().then(() => {
+  mostrarContexto();
+  carregarRecomendacoes();
+  carregarPromocoes();
+});
