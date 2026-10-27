@@ -1,88 +1,71 @@
 # Buba Promo
 
-Aplicação web de promoções — Projeto integrador, Atividade 2.
+Aplicação web de promoções de jogos de PC — Projeto integrador, Atividade 2. Tema escuro, dados no **Firebase Firestore**, promoções da API pública **[CheapShark](https://www.cheapshark.com)**, cotação do dólar da **[AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas)** e publicação no **Vercel**.
 
-- **Ofertas oficiais**: cadastradas pelo administrador, com CRUD completo no **Firebase Firestore**.
-- **Recomendações**: promoções escolhidas pelo administrador, com um comentário, exibidas na vitrine.
-- **Notificar (inspeção diária)**: catálogo de alertas do administrador (jogo, preço máximo, loja). Ao abrir o painel, cada alerta é verificado na API e as promoções que ainda não tinham aparecido são destacadas como **novas**; o admin pode recomendá-las e conclui a inspeção do dia.
-- **Promoções nas lojas**: promoções reais de jogos de PC (Steam, Epic, GOG, Humble e outras) da API pública **[CheapShark](https://www.cheapshark.com)**, com preços convertidos para reais pela cotação do dólar da **[AwesomeAPI](https://docs.awesomeapi.com.br/api-de-moedas)**.
-- **Login de administrador**: Firebase Authentication (e-mail e senha). Visitantes só leem; tudo o que grava exige login.
-- **Publicação**: Vercel (`.vercel.app`).
+## Quem vê o quê
+
+| Perfil | O que acessa |
+| --- | --- |
+| **Visitante** (sem login) | Só a **vitrine**, organizada por loja (Steam, GOG, Epic, Humble…), com busca e ordenação. |
+| **Usuário** (com login) | Vitrine + **Recomendações do dia** + página **Notificar**: escolhe, na lista de jogos que já estiveram em oferta no Buba Promo, quais quer acompanhar (com preço-alvo opcional) e recebe avisos quando eles entram em promoção. O número de avisos novos aparece no menu. |
+| **Admin** | **Painel**: averigua as promoções que chegam da CheapShark e aprova as que entram na vitrine; atualiza preços e remove promoções encerradas; mantém o **catálogo de recomendações diárias** (links para qualquer jogo, notícia ou evento gamer). |
 
 ## Requisitos da atividade
 
-O CRUD completo existe em três coleções do Firestore:
-
-| Operação | `ofertas` (aba Ofertas oficiais) | `notificar` (aba Inspeção diária) | `recomendacoes` (aba Recomendações) |
-| --- | --- | --- | --- |
-| C — Cadastrar | Formulário "Nova oferta" | Formulário "Novo alerta" | Botão **Recomendar** numa promoção da inspeção |
-| R — Consultar | Vitrine e tabela do painel | Lista de alertas com as promoções atuais | Vitrine e tabela do painel |
-| U — Atualizar | **Editar**, **Ativar/Desativar** | **Editar**, **Pausar/Ativar**, **Concluir inspeção** | **Editar comentário** |
-| D — Excluir | **Excluir** | **Excluir** | **Excluir** |
-
 | Requisito | Onde está |
 | --- | --- |
-| API externa | `src/api.js` — CheapShark (`/deals` promoções e busca, `/stores` lojas) e AwesomeAPI (USD-BRL) |
-| Publicação | Vercel, endereço `https://<projeto>.vercel.app` |
+| CRUD — `promocoes` | **C** aprovar (Painel › Averiguar) · **R** vitrine e Painel › Na vitrine · **U** atualizar preço · **D** remover |
+| CRUD — `recomendacoes` | **C** publicar · **R** vitrine (logado) e catálogo no painel · **U** editar · **D** excluir |
+| CRUD — `usuarios/{uid}/seguindo` | **C** Notificar · **R** lista "Escolha seus jogos" · **U** preço-alvo · **D** parar de notificar |
+| API externa | `src/api.js` — CheapShark (`/deals`, `/deals?id=`, `/stores`) e AwesomeAPI (`USD-BRL`) |
+| Publicação | Vercel, `https://<projeto>.vercel.app` |
 
 ## Estrutura
 
 ```
-index.html                  Vitrine pública: ofertas oficiais, recomendações e promoções
-admin.html                  Login + painel do administrador (abas)
-src/firebase.js             Inicialização do Firebase (lê as variáveis VITE_FIREBASE_*)
-src/ofertas.js              CRUD da coleção "ofertas"
-src/recomendacoes.js        CRUD da coleção "recomendacoes"
-src/notificar.js            CRUD da coleção "notificar" e registro da inspeção
-src/api.js                  Consumo das APIs públicas
-src/contexto.js             Cotação do dólar e lojas, compartilhadas entre as telas
-src/vitrine.js              Lógica da vitrine
-src/admin.js                Login e troca de abas do painel
-src/admin-notificar.js      Aba Inspeção diária
-src/admin-recomendacoes.js  Aba Recomendações
-src/admin-ofertas.js        Aba Ofertas oficiais
-src/style.css               Estilos
-firestore.rules             Regras de segurança do Firestore
+index.html                  Vitrine (pública) + recomendações do dia (logado)
+entrar.html                 Login, cadastro, Google e "esqueci minha senha"
+notificar.html              Jogos acompanhados e avisos (logado)
+admin.html                  Painel do admin
+src/firebase.js             Configuração do Firebase (projeto joao-iam)
+src/sessao.js               Cabeçalho compartilhado, login e papel de admin
+src/api.js                  CheapShark e AwesomeAPI
+src/contexto.js             Cotação e lojas compartilhadas entre as telas
+src/promocoes.js            Coleções "promocoes" e "jogos"
+src/recomendacoes.js        Coleção "recomendacoes"
+src/usuarios.js             Perfis, "seguindo" e avisos
+src/vitrine.js / entrar.js / notificar.js / admin*.js   Lógica de cada página
+firestore.rules             Regras de segurança
 ```
 
-Coleções do Firestore:
+### Coleções do Firestore
 
-- `ofertas`: `titulo`, `descricao`, `categoria`, `precoOriginal`, `precoOferta`, `imagemUrl`, `validoAte`, `ativa`, `criadoEm`.
-- `recomendacoes`: `dealID`, `titulo`, `lojaId`, `precoNormal`, `precoPromocional` (em dólar, no momento da recomendação), `desconto`, `imagem`, `link`, `comentario`, `criadoEm`.
-- `notificar`: `termo`, `precoMaximo` (R$ ou null), `lojaId`, `ativo`, `vistos` (IDs das promoções já inspecionadas), `ultimaInspecao`, `criadoEm`.
+- `promocoes/{dealID}` — promoções aprovadas: `dealID`, `gameID`, `titulo`, `lojaId`, `precoNormal`, `precoPromocional` (US$), `desconto`, `imagem`, `link`, `aprovadoEm`, `atualizadoEm`.
+- `jogos/{gameID}` — todo jogo que já teve promoção aprovada: `titulo`, `imagem`, `ultimaPromocaoEm`. É a lista que o usuário vê no Notificar.
+- `recomendacoes` — `tipo` (jogo, notícia ou evento), `titulo`, `descricao`, `link`, `imagem`, `data` (AAAA-MM-DD), `criadoEm`.
+- `usuarios/{uid}` — `nome`, `email`, `avisosLidosEm`; subcoleção `seguindo/{gameID}` com `titulo`, `imagem`, `precoAlvo` (R$ ou null).
+- `admins/{uid}` — documento que dá acesso ao painel (criado à mão no console).
 
-### Como funciona a inspeção diária
+### Como funcionam os avisos
 
-1. O admin cadastra alertas no catálogo **Notificar**.
-2. Ao entrar no painel, cada alerta ativo é consultado na CheapShark (título + loja), filtrado pelo preço máximo em reais.
-3. Promoções cujo ID não está em `vistos` aparecem como **Nova**; a aba mostra o total de novas e se a inspeção de hoje está pendente.
-4. O admin recomenda as que quiser e clica em **Concluir inspeção**: os IDs atuais entram em `vistos` e `ultimaInspecao` recebe a data de hoje.
+Quando o admin aprova uma promoção, o jogo entra (ou é atualizado) em `jogos`. Na página Notificar, o usuário marca os jogos que quer acompanhar. Os avisos são as promoções aprovadas desses jogos (respeitando o preço-alvo); as aprovadas depois da última vez que o usuário clicou em "Marcar como lidos" aparecem como **Novo** e contam no menu.
 
-## 1. Configurar o Firebase
+## Configurar o Firebase (projeto `joao-iam`)
 
-1. Em <https://console.firebase.google.com>, crie um projeto.
-2. **Firestore Database** → Criar banco de dados (modo produção) → aba **Regras** → cole o conteúdo de `firestore.rules` → Publicar.
-3. **Authentication** → Primeiros passos → ative **E-mail/senha** → aba **Usuários** → **Adicionar usuário** (esse é o login do administrador).
-4. **Configurações do projeto** → **Seus apps** → adicione um app **Web** (`</>`) e copie os valores do `firebaseConfig`.
+1. **Authentication → Sign-in method**: ative **E-mail/senha** e **Google**.
+2. **Firestore Database**: crie o banco (modo produção) → aba **Regras** → cole o conteúdo de `firestore.rules` → **Publicar**.
+3. **Tornar-se admin**: crie sua conta no site (página Entrar) e abra `/admin.html` — a página mostra o seu UID. No Firestore, crie a coleção `admins` com um documento cujo **ID é esse UID** (pode ter um campo qualquer, como `nome`). Recarregue o painel.
+4. Depois do deploy, em **Authentication → Settings → Authorized domains**, adicione `seu-projeto.vercel.app`.
 
-## 2. Rodar no computador
+A configuração do app web já está em `src/firebase.js`; não é preciso cadastrar variáveis de ambiente. (Essa chave não é secreta: quem protege os dados são as regras do Firestore.)
+
+## Rodar no computador
 
 ```bash
-cp .env.example .env   # preencha com os valores do firebaseConfig
 npm install
 npm run dev
 ```
 
-Abra o endereço mostrado no terminal. O painel fica em `/admin.html`.
+## Publicar no Vercel
 
-## 3. Publicar no Vercel
-
-1. Em <https://vercel.com/new>, importe este repositório do GitHub. O preset **Vite** é detectado sozinho (build `npm run build`, saída `dist`).
-2. Em **Environment Variables**, cadastre as mesmas variáveis do `.env`:
-   `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_STORAGE_BUCKET`, `VITE_FIREBASE_MESSAGING_SENDER_ID`, `VITE_FIREBASE_APP_ID`.
-3. Clique em **Deploy**.
-4. No Firebase, em **Authentication → Configurações → Domínios autorizados**, adicione o domínio `seu-projeto.vercel.app`.
-
-A cada `git push` na branch `main`, o Vercel publica uma nova versão.
-
-> A chave do Firebase para web não é secreta: quem protege os dados são as regras do Firestore, que só permitem escrita para usuários autenticados.
+Importe o repositório em <https://vercel.com/new>. O preset **Vite** é detectado (build `npm run build`, saída `dist`). Clique em **Deploy**. Cada `git push` na `main` publica uma nova versão.
