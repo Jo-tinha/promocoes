@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Painel · Vitrine de Ofertas</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f6f5c'/%3E%3Ctext x='16' y='22' font-size='16' text-anchor='middle' fill='white' font-family='Arial' font-weight='bold'%3E%25%3C/text%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="container">
+        <a class="marca" href="/">Vitrine de <span>Ofertas</span></a>
+        <div class="usuario" id="usuario" hidden>
+          <span id="usuario-email"></span>
+          <button class="botao secundario pequeno" id="sair" type="button">Sair</button>
+        </div>
+        <a class="link-discreto" id="voltar" href="/">← Voltar à vitrine</a>
+      </div>
+    </header>
+
+    <!-- Login -->
+    <main id="tela-login" class="container" hidden>
+      <div class="caixa login">
+        <h2>Entrar no painel</h2>
+        <form class="form" id="form-login">
+          <label>E-mail
+            <input type="email" name="email" autocomplete="username" required />
+          </label>
+          <label>Senha
+            <input type="password" name="senha" autocomplete="current-password" required />
+          </label>
+          <p class="mensagem erro" id="erro-login" role="alert"></p>
+          <button class="botao" type="submit">Entrar</button>
+        </form>
+      </div>
+    </main>
+
+    <!-- Painel (CRUD) -->
+    <main id="tela-painel" class="container painel" hidden>
+      <section class="caixa">
+        <h2 id="titulo-form">Nova oferta</h2>
+        <form class="form" id="form-oferta" novalidate>
+          <label>Título
+            <input name="titulo" maxlength="80" required />
+          </label>
+          <label>Descrição
+            <textarea name="descricao" maxlength="300"></textarea>
+          </label>
+          <label>Categoria
+            <input name="categoria" list="sugestoes-categoria" maxlength="40" required />
+            <datalist id="sugestoes-categoria">
+              <option value="eletrônicos"></option>
+              <option value="casa"></option>
+              <option value="moda"></option>
+              <option value="beleza"></option>
+              <option value="esporte"></option>
+              <option value="mercado"></option>
+            </datalist>
+          </label>
+          <div class="linha2">
+            <label>Preço original (R$)
+              <input name="precoOriginal" type="number" min="0.01" step="0.01" required />
+            </label>
+            <label>Preço da oferta (R$)
+              <input name="precoOferta" type="number" min="0.01" step="0.01" required />
+            </label>
+          </div>
+          <label>Link da imagem
+            <input name="imagemUrl" type="url" placeholder="https://…" />
+          </label>
+          <label>Válida até
+            <input name="validoAte" type="date" />
+          </label>
+          <label class="check">
+            <input name="ativa" type="checkbox" checked /> Oferta ativa (aparece na vitrine)
+          </label>
+          <p class="mensagem" id="msg-form" role="status"></p>
+          <div class="form-acoes">
+            <button class="botao" type="submit" id="botao-salvar">Cadastrar oferta</button>
+            <button class="botao secundario" type="button" id="cancelar" hidden>Cancelar edição</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="caixa">
+        <div class="secao-cabeca">
+          <h2 style="margin:0">Ofertas cadastradas</h2>
+          <p class="secao-nota" id="contagem"></p>
+        </div>
+        <div class="tabela-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th></th>
+                <th>Oferta</th>
+                <th>Preço</th>
+                <th>Validade</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="lista-ofertas">
+              <tr><td colspan="6">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/admin.js"></script>
+  </body>
+</html>
