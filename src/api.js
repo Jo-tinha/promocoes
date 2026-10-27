@@ -12,7 +12,16 @@ async function getJson(url) {
   return resp.json();
 }
 
-export const linkDaPromocao = (dealID) => `${CHEAPSHARK}/redirect?dealID=${encodeURIComponent(dealID)}`;
+// IDs da CheapShark podem vir já codificados (%3D); decodifica antes para não codificar duas vezes
+const idLimpo = (id) => {
+  try {
+    return decodeURIComponent(String(id));
+  } catch {
+    return String(id);
+  }
+};
+
+export const linkDaPromocao = (dealID) => `${CHEAPSHARK}/redirect?dealID=${encodeURIComponent(idLimpo(dealID))}`;
 
 function converter(p) {
   return {
@@ -47,7 +56,7 @@ export async function buscarPromocoes({ termo = '', lojaId = '', ordem = 'Deal R
 
 // Situação atual de uma promoção específica (usada para atualizar o preço de um destaque)
 export async function buscarPromocaoPorId(dealID) {
-  const dados = await getJson(`${CHEAPSHARK}/api/1.0/deals?id=${encodeURIComponent(dealID)}`);
+  const dados = await getJson(`${CHEAPSHARK}/api/1.0/deals?id=${encodeURIComponent(idLimpo(dealID))}`);
   const info = dados.gameInfo;
   const normal = Number(info.retailPrice);
   const promocional = Number(info.salePrice);

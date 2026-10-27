@@ -870,3 +870,43 @@ body.escolha-aberta { overflow: hidden; }
   .cabeca-loja-faixa .contagem-faixa { display: none; }
   .faixa-cabeca .ver-mais { padding: 5px 10px; font-size: 0.8rem; }
 }
+
+/* =====================================================================
+   JANELA DE DESTAQUES — painel com moldura, status ao vivo e cartões maiores
+   ===================================================================== */
+.faixa-destaques {
+  margin-top: 22px; padding: 18px 18px 6px; border-radius: 20px;
+  background:
+    radial-gradient(700px 220px at 0% 0%, rgba(255, 210, 63, 0.12), transparent 70%),
+    linear-gradient(180deg, rgba(255, 210, 63, 0.05), rgba(23, 27, 36, 0.6));
+  border: 1px solid rgba(255, 210, 63, 0.22);
+}
+.faixa-destaques .seta.esq { left: 6px; }
+.faixa-destaques .seta.dir { right: 6px; }
+.cabeca-destaques { justify-content: space-between; align-items: flex-end; flex-wrap: wrap; }
+.cabeca-destaques h2 { font-size: 1.45rem; }
+.cabeca-destaques h2::before { content: '★ '; color: #ffd23f; }
+.cabeca-destaques p { margin-top: 2px; }
+.status-ao-vivo {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 0.78rem; color: var(--texto-suave);
+  padding: 4px 10px; border-radius: 999px; background: var(--fundo-2); border: 1px solid var(--linha);
+}
+.status-ao-vivo::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--verde); box-shadow: 0 0 0 0 rgba(53, 211, 154, 0.6); animation: ao-vivo 2s infinite; }
+.status-ao-vivo.conferindo::before { background: #ffd23f; }
+.status-ao-vivo.antigo::before { background: var(--texto-suave); animation: none; }
+@keyframes ao-vivo { 0% { box-shadow: 0 0 0 0 rgba(53, 211, 154, 0.55); } 70% { box-shadow: 0 0 0 7px rgba(53, 211, 154, 0); } 100% { box-shadow: 0 0 0 0 rgba(53, 211, 154, 0); } }
+.faixa-destaques .jogo { width: 340px; box-shadow: 0 10px 30px -18px rgba(255, 210, 63, 0.5); }
+.faixa-destaques .jogo-capa { aspect-ratio: 16 / 8.2; }
+.faixa-destaques .jogo-corpo h3 { font-size: 1.05rem; }
+.faixa-destaques .comentario-dedo { border-left-color: #ffd23f; }
+.meta.preco-mudou { color: #ffd23f; border-color: rgba(255, 210, 63, 0.4); }
+@media (max-width: 640px) {
+  .faixa-destaques { margin: 16px -6px 0; padding: 14px 12px 4px; border-radius: 16px; }
+  .faixa-destaques .jogo { width: 270px; }
+  .cabeca-destaques { align-items: flex-start; gap: 8px; }
+  .status-ao-vivo { font-size: 0.72rem; }
+}
+.status.encerrada { background: rgba(255, 107, 107, 0.15); color: var(--perigo); }
+.status.mudou { background: rgba(255, 210, 63, 0.15); color: #ffd23f; }
+tr.linha-encerrada td { opacity: 0.6; }
+tr.linha-encerrada td:last-child { opacity: 1; }

@@ -2,6 +2,8 @@
 // Também mantém "jogos": todo jogo que já foi destaque, para a lista do Notificar.
 import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase.js';
+import { buscarOfertasDosJogos, linkDaPromocao } from './api.js';
+import { idPromocao } from './util.js';
 
 const colDestaques = collection(db, 'destaques');
 const colJogos = collection(db, 'jogos');
@@ -51,7 +53,8 @@ export async function destacar(p, comentario = '') {
 // R
 export async function listarDestaques() {
   const snap = await getDocs(query(colDestaques, orderBy('criadoEm', 'desc')));
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // o link é refeito a partir do ID (destaques antigos podiam ter o ID codificado duas vezes)
+  return snap.docs.map((d) => ({ id: d.id, ...d.data(), link: linkDaPromocao(d.data().dealID) }));
 }
 
 // U — preço atual vindo da API, ou o comentário do admin
@@ -67,4 +70,32 @@ export async function removerDestaque(id) {
 export async function listarJogos() {
   const snap = await getDocs(query(colJogos, orderBy('titulo')));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Confere na CheapShark, de uma vez, a situação atual de cada destaque.
+// Devolve os destaques com preço e desconto de agora e o campo "emPromocao" (false = a promoção acabou).
+// Destaques sem gameID ficam como estão.
+export async function conferirDestaquesAoVivo(destaques) {
+  const ids = [...new Set(destaques.map((d) => d.gameID).filter(Boolean))];
+  if (!ids.length) return destaques.map((d) => ({ ...d, emPromocao: d.precoPromocional < d.precoNormal }));
+  const ofertas = await buscarOfertasDosJogos(ids); // só traz o que está em promoção agora
+  const porDeal = new Map(ofertas.map((o) => [idPromocao(o.dealID), o]));
+  return destaques.map((d) => {
+    if (!d.gameID) return { ...d, emPromocao: d.precoPromocional < d.precoNormal };
+    const agora = porDeal.get(idPromocao(d.dealID));
+    if (!agora) return { ...d, emPromocao: false };
+    return {
+      ...d,
+      precoNormal: agora.precoNormal,
+      precoPromocional: agora.precoPromocional,
+      desconto: agora.desconto,
+      emPromocao: true,
+      precoMudou: Math.abs(agora.precoPromocional - d.precoPromocional) > 0.009,
+    };
+  });
+}
+
+// U — comentário do admin
+export async function editarComentarioDestaque(id, comentario) {
+  return atualizarDestaque(id, { comentario: comentario.trim().slice(0, 140) });
 }

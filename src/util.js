@@ -34,3 +34,12 @@ export function formatarDiaISO(iso) {
   const [a, m, d] = iso.split('-');
   return `${d}/${m}/${a}`;
 }
+
+// IDs de promoção da CheapShark às vezes vêm codificados (%3D) e às vezes não (=); compare sempre assim
+export function idPromocao(id = '') {
+  try {
+    return decodeURIComponent(String(id));
+  } catch {
+    return String(id);
+  }
+}

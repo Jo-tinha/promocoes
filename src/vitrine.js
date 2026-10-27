@@ -1,6 +1,6 @@
 import './style.css';
 import { iniciarSessao } from './sessao.js';
-import { listarDestaques } from './destaques.js';
+import { listarDestaques, conferirDestaquesAoVivo } from './destaques.js';
 import { listarRecomendacoes, TIPOS } from './recomendacoes.js';
 import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela } from './estrela.js';
 import { cartaoJogo as cartaoBase, cartaoAgrupado, agruparPorJogo, pilulaLoja, metas, precos, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
@@ -132,6 +132,7 @@ function renderizarBillboard(itens) {
 // ---------- Faixas ----------
 async function carregarDestaques() {
   const trilho = $('#trilho-destaques');
+  const status = $('#status-destaques');
   trilho.innerHTML = esqueletos(4);
   let destaques = [];
   try {
@@ -139,20 +140,48 @@ async function carregarDestaques() {
   } catch (erro) {
     console.error(erro);
   }
-  if (destaques.length) {
-    const itens = agruparPorJogo(destaques);
-    trilho.innerHTML = cartoesAgrupados(destaques);
-    renderizarBillboard(itens.slice(0, 5));
-  } else {
-    $('#faixa-destaques').hidden = true;
-    // Sem destaques ainda: o banner mostra as melhores promoções do momento
-    try {
-      renderizarBillboard((await buscarPromocoes({ ordem: 'Deal Rating', limite: 5 })).filter((p) => p.imagem));
-    } catch (erro) {
-      console.error(erro);
-    }
+  if (!destaques.length) return semDestaques();
+
+  // 1) mostra na hora com os preços salvos…
+  desenharDestaques(destaques);
+  status.textContent = 'conferindo preços…';
+  status.className = 'status-ao-vivo conferindo';
+
+  // 2) …e confere na CheapShark: preço de agora e quem já saiu de promoção
+  try {
+    const conferidos = await conferirDestaquesAoVivo(destaques);
+    const ativos = conferidos.filter((d) => d.emPromocao);
+    const encerrados = conferidos.length - ativos.length;
+    if (!ativos.length) return semDestaques();
+    desenharDestaques(ativos);
+    const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    status.textContent = `preços conferidos às ${hora}${encerrados ? ` · ${encerrados} encerrada${encerrados > 1 ? 's' : ''} saiu da lista` : ''}`;
+    status.className = 'status-ao-vivo';
+    estado.destaques = ativos;
+  } catch (erro) {
+    console.error(erro);
+    status.textContent = 'preços da última atualização do admin';
+    status.className = 'status-ao-vivo antigo';
   }
-  estado.destaques = destaques;
+}
+
+function desenharDestaques(lista) {
+  const itens = agruparPorJogo(lista);
+  $('#faixa-destaques').hidden = false;
+  $('#qtd-destaques').textContent = `${itens.length} ${itens.length === 1 ? 'jogo' : 'jogos'}`;
+  $('#trilho-destaques').innerHTML = cartoesAgrupados(lista);
+  renderizarBillboard(itens.slice(0, 5));
+  estado.destaques = lista;
+}
+
+// Sem destaques (ou todos encerrados): esconde a faixa e o banner mostra as melhores promoções do momento
+async function semDestaques() {
+  $('#faixa-destaques').hidden = true;
+  try {
+    renderizarBillboard((await buscarPromocoes({ ordem: 'Deal Rating', limite: 5 })).filter((p) => p.imagem));
+  } catch (erro) {
+    console.error(erro);
+  }
 }
 
 function blocoLoja(lojaId, lista) {

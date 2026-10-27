@@ -3,7 +3,7 @@ import { buscarOfertasDoJogo } from './api.js';
 import { contexto, carregarContexto, precoEmReal } from './contexto.js';
 import { varsDaLoja, imgJogo } from './lojas.js';
 import { botaoEstrela } from './estrela.js';
-import { esc } from './util.js';
+import { esc, idPromocao } from './util.js';
 
 let dialogo;
 
@@ -32,7 +32,7 @@ function linhaOferta(o, { destacadas, menor }) {
         ${loja ? `<img src="${esc(loja.icone)}" alt="" />` : ''}
         <span>
           <strong>${esc(loja?.nome || 'Loja')}</strong>
-          <small>${[ehMenor ? 'Menor preço' : '', destacadas.has(o.dealID) ? '★ Destaque' : ''].filter(Boolean).join(' · ')}</small>
+          <small>${[ehMenor ? 'Menor preço' : '', destacadas.has(idPromocao(o.dealID)) ? '★ Destaque' : ''].filter(Boolean).join(' · ')}</small>
         </span>
       </span>
       <span class="escolha-preco">
@@ -79,7 +79,7 @@ function renderizar(jogo, ofertas, { destacadas, historico, carregando = false, 
 // jogo: { gameID, titulo, imagem, steamAppID, ofertas: [...] } — ofertas já conhecidas (dos destaques)
 export async function abrirEscolha(jogo) {
   if (!dialogo) montarDialogo();
-  const destacadas = new Set(jogo.ofertas.map((o) => o.dealID));
+  const destacadas = new Set(jogo.ofertas.map((o) => idPromocao(o.dealID)));
   const conhecidas = [...jogo.ofertas].sort((a, b) => a.precoPromocional - b.precoPromocional);
   await carregarContexto();
   renderizar(jogo, conhecidas, { destacadas, carregando: true });
@@ -90,7 +90,7 @@ export async function abrirEscolha(jogo) {
   try {
     // preços atuais de todas as lojas onde o jogo está à venda
     const atual = await buscarOfertasDoJogo(jogo.gameID);
-    const emPromocao = atual.ofertas.filter((o) => o.precoPromocional < o.precoNormal || destacadas.has(o.dealID));
+    const emPromocao = atual.ofertas.filter((o) => o.precoPromocional < o.precoNormal || destacadas.has(idPromocao(o.dealID)));
     const lista = emPromocao.length ? emPromocao : atual.ofertas;
     if (dialogo.open) renderizar({ ...jogo, steamAppID: jogo.steamAppID || atual.steamAppID }, lista, { destacadas, historico: atual.menorPrecoHistorico });
   } catch (erro) {

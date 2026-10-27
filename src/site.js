@@ -162,12 +162,31 @@ function montarVoltarAoTopo() {
   addEventListener('scroll', () => (botao.hidden = scrollY < 700), { passive: true });
 }
 
-// ---------- Rodinha do mouse nas faixas ----------
-// Com o mouse em cima de uma faixa de jogos, a rodinha rola a faixa para o lado.
-// Fora das faixas (laterais da página, entre as faixas) a rodinha rola a página normalmente.
+// ---------- Rodinha do mouse nas faixas (rolagem suave) ----------
+// Com o mouse em cima de uma faixa de jogos, a rodinha rola a faixa para o lado, de forma suave:
+// cada giro soma um "alvo" e a faixa desliza até ele, desacelerando no fim.
+// Fora das faixas (laterais, entre as faixas) a rodinha rola a página normalmente.
 // Quando a faixa chega ao fim, a rodinha volta a rolar a página.
 function ativarRodinhaHorizontal() {
-  const travas = new WeakMap();
+  const animacoes = new WeakMap(); // faixa → { alvo, quadro }
+  const reduzir = matchMedia('(prefers-reduced-motion: reduce)');
+
+  function deslizar(faixa) {
+    const a = animacoes.get(faixa);
+    const atual = faixa.scrollLeft;
+    const distancia = a.alvo - atual;
+    if (Math.abs(distancia) < 0.6) {
+      faixa.scrollLeft = a.alvo;
+      a.quadro = null;
+      // devolve a rolagem suave do CSS (usada pelas setas); o "encaixe" fica desligado nesta faixa,
+      // senão ela daria um pulinho até o cartão mais próximo depois de parar
+      faixa.style.scrollBehavior = '';
+      return;
+    }
+    faixa.scrollLeft = atual + distancia * 0.16; // aproxima 16% por quadro: começa rápido e freia no fim
+    a.quadro = requestAnimationFrame(() => deslizar(faixa));
+  }
+
   document.addEventListener(
     'wheel',
     (e) => {
@@ -178,15 +197,24 @@ function ativarRodinhaHorizontal() {
       const maximo = faixa.scrollWidth - faixa.clientWidth;
       if (maximo <= 1) return; // nada para rolar de lado
       const delta = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaMode === 2 ? e.deltaY * faixa.clientWidth : e.deltaY;
-      const noComeco = faixa.scrollLeft <= 0;
-      const noFim = faixa.scrollLeft >= maximo - 1;
-      if ((delta < 0 && noComeco) || (delta > 0 && noFim)) return; // na ponta: deixa a página rolar
+
+      const a = animacoes.get(faixa) || { alvo: faixa.scrollLeft, quadro: null };
+      if (!a.quadro) a.alvo = faixa.scrollLeft; // começa do ponto atual se não estava animando
+      const naPontaEsq = a.alvo <= 0;
+      const naPontaDir = a.alvo >= maximo - 1;
+      if ((delta < 0 && naPontaEsq) || (delta > 0 && naPontaDir)) return; // na ponta: deixa a página rolar
+
       e.preventDefault();
-      // o "encaixe" dos cartões atrapalha a rolagem pela rodinha; desliga enquanto ela gira
-      faixa.style.scrollSnapType = 'none';
-      clearTimeout(travas.get(faixa));
-      travas.set(faixa, setTimeout(() => (faixa.style.scrollSnapType = ''), 250));
-      faixa.scrollBy({ left: delta * 1.3, behavior: 'instant' });
+      a.alvo = Math.max(0, Math.min(maximo, a.alvo + delta * 1.4));
+      animacoes.set(faixa, a);
+
+      if (reduzir.matches) {
+        faixa.scrollLeft = a.alvo; // quem prefere menos animação: vai direto
+        return;
+      }
+      faixa.style.scrollSnapType = 'none'; // o encaixe brigaria com a animação
+      faixa.style.scrollBehavior = 'auto';
+      if (!a.quadro) a.quadro = requestAnimationFrame(() => deslizar(faixa));
     },
     { passive: false },
   );

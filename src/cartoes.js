@@ -17,6 +17,7 @@ export function metas(p) {
   if (p.metacritic) itens.push(`<span class="meta mc" title="Nota no Metacritic">MC ${p.metacritic}</span>`);
   if (p.lancamento) itens.push(`<span class="meta">${p.lancamento.getFullYear()}</span>`);
   if (p.termina) itens.push(`<span class="meta">até ${p.termina.toLocaleDateString('pt-BR')}</span>`);
+  if (p.precoMudou) itens.push('<span class="meta preco-mudou" title="O preço mudou desde que o jogo foi destacado">preço atualizado</span>');
   return itens.length ? `<div class="metas">${itens.join('')}</div>` : '';
 }
 

@@ -1,7 +1,7 @@
 // Abas "Averiguar promoções" e "Destaques": todas as promoções entram na vitrine automaticamente;
 // o admin averigua o que está chegando e escolhe a dedo as que viram destaque.
 import { buscarPromocoes, buscarPromocaoPorId } from './api.js';
-import { destacar, listarDestaques, atualizarDestaque, removerDestaque } from './destaques.js';
+import { destacar, listarDestaques, atualizarDestaque, removerDestaque, conferirDestaquesAoVivo, editarComentarioDestaque } from './destaques.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
 import { esc, IMAGEM_PADRAO } from './util.js';
 import { sincronizarCatalogo } from './catalogo.js';
@@ -66,37 +66,66 @@ async function buscarChegando() {
 }
 
 // ---------- Na vitrine ----------
+// situação de agora (vinda da conferência ao vivo); undefined = ainda conferindo
+function situacao(p) {
+  if (p.emPromocao === undefined) return '<span class="status off">conferindo…</span>';
+  if (!p.emPromocao) return '<span class="status encerrada">Encerrada</span>';
+  if (p.precoMudou) return '<span class="status mudou">Preço mudou</span>';
+  return '<span class="status ok">Em promoção</span>';
+}
+
 function linhaVitrine(p) {
   const aprovada = p.criadoEm ? p.criadoEm.toDate().toLocaleDateString('pt-BR') : '—';
-  const ativa = p.precoPromocional < p.precoNormal;
+  const salvo = p.salvo || p; // preço gravado no Firestore
+  const mudou = p.emPromocao && p.precoMudou;
   return `
-    <tr>
+    <tr class="${p.emPromocao === false ? 'linha-encerrada' : ''}">
       <td><img class="miniatura" src="${esc(p.imagem)}" alt="" onerror="this.src='${IMAGEM_PADRAO}'" /></td>
       <td><a href="${esc(p.link)}" target="_blank" rel="noopener"><strong>${esc(p.titulo)}</strong></a><br /><span class="secao-nota">${esc(nomeDaLoja(p.lojaId))}${p.comentario ? ` · “${esc(p.comentario)}”` : ''}</span></td>
-      <td><span class="preco-antigo">${precoEmReal(p.precoNormal)}</span><br />${precoEmReal(p.precoPromocional)} <span class="secao-nota">(-${p.desconto}%)</span></td>
+      <td>
+        ${mudou ? `<span class="preco-antigo">${precoEmReal(salvo.precoPromocional)}</span> → ` : `<span class="preco-antigo">${precoEmReal(p.precoNormal)}</span><br />`}
+        <strong>${precoEmReal(p.precoPromocional)}</strong> <span class="secao-nota">(-${p.desconto}%)</span>
+      </td>
       <td>${aprovada}</td>
-      <td><span class="status ${ativa ? 'ok' : 'off'}">${ativa ? 'Em promoção' : 'Encerrada'}</span></td>
+      <td>${situacao(p)}</td>
       <td>
         <div class="acoes-linha">
-          <button class="botao secundario pequeno" type="button" data-atualizar="${esc(p.id)}">Atualizar preço</button>
+          <button class="botao secundario pequeno" type="button" data-comentar="${esc(p.id)}">Comentário</button>
+          <button class="botao secundario pequeno" type="button" data-atualizar="${esc(p.id)}">${mudou ? 'Salvar preço novo' : 'Atualizar preço'}</button>
           <button class="botao perigo pequeno" type="button" data-remover="${esc(p.id)}">Remover</button>
         </div>
       </td>
     </tr>`;
 }
 
+function desenharTabela() {
+  const encerrados = naVitrine.filter((p) => p.emPromocao === false).length;
+  const mudaram = naVitrine.filter((p) => p.emPromocao && p.precoMudou).length;
+  qtdVitrine.hidden = naVitrine.length === 0;
+  qtdVitrine.textContent = naVitrine.length;
+  notaVitrine.textContent =
+    `${naVitrine.length} ${naVitrine.length === 1 ? 'destaque' : 'destaques'} (os 5 primeiros giram no banner)` +
+    (encerrados ? ` · ${encerrados} encerrado${encerrados > 1 ? 's' : ''} (já escondido${encerrados > 1 ? 's' : ''} da vitrine)` : '') +
+    (mudaram ? ` · ${mudaram} com preço diferente do salvo` : '');
+  const botaoEncerrados = document.querySelector('#remover-encerrados');
+  botaoEncerrados.hidden = !encerrados;
+  botaoEncerrados.textContent = `Remover ${encerrados} encerrado${encerrados > 1 ? 's' : ''}`;
+  listaVitrine.innerHTML = naVitrine.length
+    ? naVitrine.map(linhaVitrine).join('')
+    : '<tr><td colspan="6">Nenhum destaque ainda. Use a aba "Averiguar promoções".</td></tr>';
+}
+
 export async function carregarVitrineAdmin() {
   try {
     naVitrine = await listarDestaques();
-    qtdVitrine.hidden = naVitrine.length === 0;
-    qtdVitrine.textContent = naVitrine.length;
-    notaVitrine.textContent = `${naVitrine.length} ${naVitrine.length === 1 ? 'destaque' : 'destaques'} no topo da vitrine (os 5 primeiros giram no banner).`;
-    listaVitrine.innerHTML = naVitrine.length
-      ? naVitrine.map(linhaVitrine).join('')
-      : '<tr><td colspan="6">Nenhum destaque ainda. Use a aba "Averiguar promoções".</td></tr>';
+    desenharTabela();
+    // confere a situação de agora sem gravar nada (o admin decide o que salvar ou remover)
+    const conferidos = await conferirDestaquesAoVivo(naVitrine);
+    naVitrine = conferidos.map((c, i) => ({ ...c, salvo: naVitrine[i] }));
+    desenharTabela();
   } catch (erro) {
     console.error(erro);
-    listaVitrine.innerHTML = '<tr><td colspan="6" class="mensagem erro">Erro ao carregar a vitrine.</td></tr>';
+    if (!naVitrine.length) listaVitrine.innerHTML = '<tr><td colspan="6" class="mensagem erro">Erro ao carregar os destaques.</td></tr>';
   }
 }
 
@@ -148,6 +177,20 @@ export async function iniciarAveriguar() {
 
   // U — atualizar preço / D — remover
   listaVitrine.addEventListener('click', async (e) => {
+    const comentar = e.target.closest('[data-comentar]');
+    if (comentar) {
+      const promo = naVitrine.find((p) => p.id === comentar.dataset.comentar);
+      const novo = prompt(`Comentário do destaque "${promo.titulo}" (aparece no cartão e no banner):`, promo.comentario || '');
+      if (novo === null) return;
+      try {
+        await editarComentarioDestaque(promo.id, novo);
+        await carregarVitrineAdmin();
+      } catch (erro) {
+        console.error(erro);
+        alert('Não foi possível salvar o comentário.');
+      }
+      return;
+    }
     const botao = e.target.closest('[data-atualizar], [data-remover]');
     if (!botao) return;
     const id = botao.dataset.atualizar || botao.dataset.remover;
@@ -193,6 +236,22 @@ export async function iniciarAveriguar() {
     } finally {
       botaoAtualizarTodas.disabled = false;
       botaoAtualizarTodas.textContent = 'Atualizar todos os preços';
+    }
+  });
+
+  const botaoEncerrados = document.querySelector('#remover-encerrados');
+  botaoEncerrados.addEventListener('click', async () => {
+    const encerrados = naVitrine.filter((p) => p.emPromocao === false);
+    if (!encerrados.length || !confirm(`Remover ${encerrados.length} destaque(s) cuja promoção acabou?`)) return;
+    botaoEncerrados.disabled = true;
+    try {
+      await Promise.all(encerrados.map((p) => removerDestaque(p.id)));
+      await carregarVitrineAdmin();
+    } catch (erro) {
+      console.error(erro);
+      alert('Não foi possível remover todos. Tente de novo.');
+    } finally {
+      botaoEncerrados.disabled = false;
     }
   });
 
