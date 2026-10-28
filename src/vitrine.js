@@ -1,6 +1,6 @@
 import './style.css';
 import { iniciarSessao } from './sessao.js';
-import { listarDestaques, conferirDestaquesAoVivo } from './destaques.js';
+import { ouvirDestaques, conferirDestaquesAoVivo } from './destaques.js';
 import { listarRecomendacoes, TIPOS } from './recomendacoes.js';
 import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela } from './estrela.js';
 import { cartaoJogo as cartaoBase, cartaoAgrupado, agruparPorJogo, pilulaLoja, metas, precos, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
@@ -8,7 +8,7 @@ import { abrirEscolha } from './escolher-loja.js';
 import { salvarNoCatalogo } from './catalogo.js';
 import { buscarPromocoes, buscarGratis } from './api.js';
 import { contexto, carregarContexto, nomeDaLoja, precoEmReal } from './contexto.js';
-import { ORDEM_LOJAS, varsDaLoja, imgJogo } from './lojas.js';
+import { ORDEM_LOJAS, varsDaLoja, imgJogo, chaveDaImagem } from './lojas.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
 
 const $ = (s) => document.querySelector(s);
@@ -84,10 +84,10 @@ function prepararBanner() {
 
 let fundoAtual = '';
 function trocarFundoDoBanner(p) {
-  const html = imgJogo(p, 'banner', 'fetchpriority="high"');
-  const chave = html.match(/src="([^"]+)"/)?.[1] || '';
+  const chave = chaveDaImagem(p, 'banner');
   if (chave === fundoAtual) return; // mesma imagem: não mexe
   fundoAtual = chave;
+  const html = imgJogo(p, 'banner', 'fetchpriority="high"');
   const [a, b] = elBillboard.querySelectorAll('.billboard-fundo .camada');
   const visivel = a.classList.contains('ativa') ? a : b;
   const proxima = visivel === a ? b : a;
@@ -112,14 +112,21 @@ function trocarFundoDoBanner(p) {
   }
 }
 
-function renderizarBillboard(itens) {
+let chaveBillboard = '';
+function renderizarBillboard(novos) {
+  if (!novos.length) return;
+  const chave = novos.map((p) => p.dealID).join('|');
+  if (chave === chaveBillboard && estado.atualizarBillboard) return estado.atualizarBillboard(novos);
+  chaveBillboard = chave;
   clearInterval(rotacao);
-  if (!itens.length) return;
   prepararBanner();
+  let itens = novos;
   let atual = 0;
-  const mostrar = (n) => {
+  // suave = só atualiza preço/estrela do mesmo destaque, sem repetir a animação de entrada
+  const mostrar = (n, { suave = false } = {}) => {
     atual = n;
     const p = itens[n];
+    elBillboard.querySelector('.billboard-texto').classList.toggle('sem-animacao', suave);
     estado.promos.set(p.dealID, p);
     if (p.agrupado) p.ofertas.forEach((o) => estado.promos.set(o.dealID, o));
     elBillboard.classList.remove('vazio');
@@ -176,52 +183,105 @@ function renderizarBillboard(itens) {
     }
   };
   reiniciar();
-  estado.reBillboard = () => mostrar(atual);
+  estado.reBillboard = () => mostrar(atual, { suave: true });
+  estado.atualizarBillboard = (lista) => {
+    itens = lista;
+    mostrar(atual, { suave: true });
+  };
 }
 
 // ---------- Faixas ----------
-async function carregarDestaques() {
-  const trilho = $('#trilho-destaques');
-  const status = $('#status-destaques');
-  trilho.innerHTML = esqueletos(4);
-  let destaques = [];
-  try {
-    destaques = (await listarDestaques()).filter((d) => d.ativo); // pausados no painel não aparecem
-  } catch (erro) {
-    console.error(erro);
-  }
-  if (!destaques.length) return semDestaques();
+// Destaques mais rápidos:
+// - a consulta ao Firestore começa assim que a página abre, junto com a cotação (não depois dela);
+// - a última lista conferida fica guardada na aba (sessionStorage) e aparece na hora ao voltar à vitrine;
+// - fica "ouvindo" o Firestore: o que o admin muda aparece sem recarregar a página;
+// - os preços são conferidos de novo na CheapShark a cada 2 minutos com a página visível.
+const CHAVE_CACHE = 'buba-destaques';
+const CONFERIR_A_CADA = 2 * 60 * 1000;
 
-  // 1) mostra na hora com os preços salvos…
-  desenharDestaques(destaques);
+function destaquesGuardados() {
+  try {
+    return JSON.parse(sessionStorage.getItem(CHAVE_CACHE) || 'null');
+  } catch {
+    return null;
+  }
+}
+function guardarDestaques(lista) {
+  try {
+    const leve = lista.map(({ criadoEm, atualizadoEm, ...resto }) => resto);
+    sessionStorage.setItem(CHAVE_CACHE, JSON.stringify(leve));
+  } catch {
+    /* sem armazenamento: só não guarda */
+  }
+}
+
+let destaquesDoBanco = null;
+let conferindo = 0;
+
+async function conferirAgora() {
+  if (!destaquesDoBanco?.length) return;
+  const status = $('#status-destaques');
+  const base = destaquesDoBanco;
+  const vez = ++conferindo;
   status.textContent = 'conferindo preços…';
   status.className = 'status-ao-vivo conferindo';
-
-  // 2) …e confere na CheapShark: preço de agora e quem já saiu de promoção
   try {
-    const conferidos = await conferirDestaquesAoVivo(destaques);
+    const conferidos = await conferirDestaquesAoVivo(base);
+    if (vez !== conferindo) return; // chegou uma lista mais nova enquanto conferia
     const ativos = conferidos.filter((d) => d.emPromocao);
     const encerrados = conferidos.length - ativos.length;
+    guardarDestaques(ativos);
     if (!ativos.length) return semDestaques();
     desenharDestaques(ativos);
     const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     status.textContent = `preços conferidos às ${hora}${encerrados ? ` · ${encerrados} encerrada${encerrados > 1 ? 's' : ''} saiu da lista` : ''}`;
     status.className = 'status-ao-vivo';
-    estado.destaques = ativos;
   } catch (erro) {
     console.error(erro);
+    if (vez !== conferindo) return;
     status.textContent = 'preços da última atualização do admin';
     status.className = 'status-ao-vivo antigo';
   }
 }
 
+function carregarDestaques(contextoPronto) {
+  const trilho = $('#trilho-destaques');
+  const guardados = destaquesGuardados();
+  if (guardados?.length) contextoPronto.then(() => desenharDestaques(guardados));
+  else trilho.innerHTML = esqueletos(4);
+
+  let primeiraLista = true;
+  ouvirDestaques(
+    async (lista) => {
+      const primeira = primeiraLista;
+      primeiraLista = false;
+      await contextoPronto; // preços em reais precisam da cotação
+      destaquesDoBanco = lista.filter((d) => d.ativo); // pausados no painel não aparecem
+      if (!destaquesDoBanco.length) {
+        guardarDestaques([]);
+        return semDestaques();
+      }
+      // 1) na primeira vez sem cópia guardada, mostra na hora com os preços salvos…
+      if (primeira && !guardados?.length) desenharDestaques(destaquesDoBanco);
+      conferirAgora(); // 2) …e os de agora na CheapShark
+    },
+    (erro) => {
+      console.error(erro);
+      contextoPronto.then(() => !guardados?.length && semDestaques());
+    },
+  );
+
+  setInterval(() => document.visibilityState === 'visible' && conferirAgora(), CONFERIR_A_CADA);
+  document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && conferirAgora());
+}
+
 // "exibir" (definido no painel): 'ambos', só no 'banner' ou só na 'faixa'
 let assinaturaDestaques = '';
+let chaveFaixa = '';
 function desenharDestaques(lista) {
   // assinatura: quais destaques, em que ordem e com que preço; se nada mudou, não mexe na tela
-  const assinatura = lista.map((d) => `${d.dealID}:${d.precoPromocional}:${d.exibir}`).join('|');
+  const assinatura = lista.map((d) => `${d.dealID}:${d.precoPromocional}:${d.exibir}:${d.comentario || ''}`).join('|');
   if (assinatura === assinaturaDestaques) return;
-  const redesenho = Boolean(assinaturaDestaques);
   assinaturaDestaques = assinatura;
 
   const naFaixa = lista.filter((d) => d.exibir !== 'banner');
@@ -230,13 +290,47 @@ function desenharDestaques(lista) {
   const trilho = $('#trilho-destaques');
   $('#faixa-destaques').hidden = !itens.length;
   $('#qtd-destaques').textContent = `${itens.length} ${itens.length === 1 ? 'jogo' : 'jogos'}`;
-  const rolagem = trilho.scrollLeft;
-  trilho.classList.toggle('sem-animacao', redesenho); // não repete a entrada dos cartões
-  trilho.innerHTML = cartoesAgrupados(naFaixa);
-  trilho.scrollLeft = rolagem; // mantém a posição se a pessoa já tinha rolado
+
+  const chave = itens.map((p) => p.dealID).join('|');
+  const html = itens.map((item, i) => cartaoJogo(item, { especial: true, i })).join('');
+  if (chave === chaveFaixa) {
+    atualizarCartoesNoLugar(trilho, html); // mesmos jogos: só preço/desconto/comentário mudam
+  } else if (!chaveFaixa || trilho.querySelector('.esqueleto')) {
+    trilho.innerHTML = html; // primeira vez: entra com a animação normal
+  } else {
+    // a lista mudou: some e reaparece suavemente, sem repetir a entrada cartão a cartão
+    const rolagem = trilho.scrollLeft;
+    trilho.classList.add('trocando');
+    setTimeout(() => {
+      trilho.classList.add('sem-animacao');
+      trilho.innerHTML = html;
+      trilho.scrollLeft = rolagem;
+      requestAnimationFrame(() => trilho.classList.remove('trocando'));
+    }, 250);
+  }
+  chaveFaixa = chave;
+
   if (noBanner.length) renderizarBillboard(noBanner.slice(0, 6));
   else semDestaquesNoBanner();
   estado.destaques = lista;
+}
+
+// Troca só as partes que mudaram de cada cartão; a capa (imagem) não é tocada
+function atualizarCartoesNoLugar(trilho, html) {
+  const t = document.createElement('template');
+  t.innerHTML = html;
+  for (const novo of t.content.querySelectorAll('.jogo')) {
+    const atual = trilho.querySelector(`.jogo[data-deal="${CSS.escape(novo.dataset.deal)}"]`);
+    if (!atual) continue;
+    const corpoNovo = novo.querySelector('.jogo-corpo');
+    const corpo = atual.querySelector('.jogo-corpo');
+    if (corpo && corpoNovo && corpo.innerHTML !== corpoNovo.innerHTML) corpo.innerHTML = corpoNovo.innerHTML;
+    const seloNovo = novo.querySelector('.jogo-capa > .desconto');
+    const selo = atual.querySelector('.jogo-capa > .desconto');
+    if (selo && seloNovo) selo.outerHTML !== seloNovo.outerHTML && selo.replaceWith(seloNovo);
+    else if (selo) selo.remove();
+    else if (seloNovo) atual.querySelector('.jogo-capa').append(seloNovo);
+  }
 }
 
 async function semDestaquesNoBanner() {
@@ -250,6 +344,8 @@ async function semDestaquesNoBanner() {
 // Sem destaques (ou todos encerrados): esconde a faixa e o banner mostra as melhores promoções do momento
 async function semDestaques() {
   $('#faixa-destaques').hidden = true;
+  assinaturaDestaques = '';
+  chaveFaixa = '';
   try {
     renderizarBillboard((await buscarPromocoes({ ordem: 'Deal Rating', limite: 5 })).filter((p) => p.imagem));
   } catch (erro) {
@@ -365,12 +461,13 @@ botaoMaisLojas.addEventListener('click', carregarMaisLojas);
 
 // ---------- Início ----------
 async function iniciar() {
-  await carregarContexto();
+  const contextoPronto = carregarContexto();
+  carregarDestaques(contextoPronto); // começa já, em paralelo com a cotação e as lojas
+  await contextoPronto;
   $('#cotacao').innerHTML = contexto.cotacao ? `Dólar: <strong>${formatarReal(contexto.cotacao)}</strong>` : 'Preços em dólar';
   estado.lojasPendentes = ORDEM_LOJAS.filter((id) => contexto.lojas.has(id));
   renderizarAtalhos();
   carregarGratis();
-  await carregarDestaques();
   carregarMaisLojas();
 }
 iniciar();

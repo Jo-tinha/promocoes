@@ -1,6 +1,6 @@
 // Destaques: promoções escolhidas a dedo pelo admin (coleção "destaques").
 // Também mantém "jogos": todo jogo que já foi destaque, para a lista do Notificar.
-import { collection, doc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase.js';
 import { buscarOfertasDosJogos, linkDaPromocao } from './api.js';
 import { idPromocao } from './util.js';
@@ -51,8 +51,7 @@ export async function destacar(p, comentario = '') {
 }
 
 // R
-export async function listarDestaques() {
-  const snap = await getDocs(query(colDestaques, orderBy('criadoEm', 'desc')));
+function destaquesDoSnapshot(snap) {
   // o link é refeito a partir do ID (destaques antigos podiam ter o ID codificado duas vezes)
   const lista = snap.docs.map((d) => {
     const dados = d.data();
@@ -72,6 +71,17 @@ export async function listarDestaques() {
     .map((d, i) => ({ d, i }))
     .sort((a, b) => (a.d.ordem ?? semOrdem) - (b.d.ordem ?? semOrdem) || a.i - b.i)
     .map(({ d }) => d);
+}
+
+const consultaDestaques = query(colDestaques, orderBy('criadoEm', 'desc'));
+
+export async function listarDestaques() {
+  return destaquesDoSnapshot(await getDocs(consultaDestaques));
+}
+
+// Tempo real: chama "aoMudar" com a lista sempre que o admin mexe nos destaques
+export function ouvirDestaques(aoMudar, aoFalhar) {
+  return onSnapshot(consultaDestaques, (snap) => aoMudar(destaquesDoSnapshot(snap)), aoFalhar);
 }
 
 // U — preço atual vindo da API, ou o comentário do admin

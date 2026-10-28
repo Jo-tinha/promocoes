@@ -256,7 +256,6 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 .billboard-fundo { position: absolute; inset: 0; z-index: -2; }
 .billboard-fundo img {
   width: 100%; height: 100%; object-fit: cover; filter: saturate(1.1);
-  animation: kenburns 18s ease-in-out infinite alternate;
 }
 .billboard::before {
   content: ''; position: absolute; inset: 0; z-index: -1;
@@ -279,7 +278,6 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
 .billboard-pontos button[aria-current='true'] { background: #fff; }
 .billboard.vazio { min-height: 260px; }
 
-@keyframes kenburns { from { transform: scale(1.02); } to { transform: scale(1.12) translate(-1.5%, -1%); } }
 @keyframes subir { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @keyframes brilho { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
 
@@ -970,14 +968,18 @@ td.ordem .botao { padding: 4px 8px; }
 @media (prefers-reduced-motion: reduce) { .billboard-fundo .camada { transition: none; } }
 
 /* Capa só com miniatura pequena: imagem inteira sobre um fundo desfocado (em vez de esticada e borrada) */
-.capa-baixa-res { isolation: isolate; }
-.capa-baixa-res::before {
-  content: ''; position: absolute; inset: -24px; z-index: -1;
-  background: var(--capa-fundo) center / cover no-repeat;
-  filter: blur(22px) saturate(1.3) brightness(0.55);
+.jogo-capa img.img-desfocada {
+  position: absolute; inset: 0; transform: scale(1.25);
+  filter: blur(18px) saturate(1.3) brightness(0.55);
 }
-.capa-baixa-res > img.img-jogo {
-  position: absolute; inset: 0; margin: auto; width: var(--capa-largura, 70%); height: auto; max-height: 86%;
+.jogo:hover .jogo-capa img.img-desfocada { transform: scale(1.3); }
+.jogo-capa img.baixa-res {
+  position: absolute; inset: 0; margin: auto; width: min(86%, calc(var(--nw, 200) * 1.6px)); height: auto; max-height: 86%;
   object-fit: contain; border-radius: 6px; box-shadow: 0 6px 22px rgba(0,0,0,0.55);
 }
-.escolha-capa.capa-baixa-res { overflow: hidden; }
+.jogo:hover .jogo-capa img.baixa-res { transform: scale(1.04); }
+
+/* Troca suave da faixa de destaques quando a lista muda */
+.trilho.trocando { opacity: 0; }
+#trilho-destaques { transition: opacity 0.25s ease; }
+.billboard-texto.sem-animacao .billboard-conteudo { animation: none; }

@@ -106,6 +106,18 @@ const aspas = (t) => String(t).replaceAll('&', '&amp;').replaceAll('"', '&quot;'
 // URL que funcionou para cada imagem (chave = primeira opção). Evita repetir as tentativas que falham
 // a cada redesenho — era isso que fazia as imagens "tremerem".
 const imagemQueFuncionou = new Map();
+// Imagens que só existem em miniatura (URL → largura real). Lembrar disso deixa o redesenho
+// idêntico ao anterior: a capa não "pula" de tamanho depois de carregar.
+const miniaturas = new Map();
+
+// Primeira opção de imagem de um jogo — serve para saber se a imagem mudou de verdade
+export const chaveDaImagem = (p, tipo = 'cartao') => fontesDaImagem(p, tipo)[0];
+
+// Miniatura pequena: imagem inteira (sem ampliar demais) sobre uma cópia desfocada dela mesma,
+// em vez de esticada e borrada
+const htmlMiniatura = (src, largura, atributos) =>
+  `<img class="img-desfocada" src="${aspas(src)}" alt="" aria-hidden="true" ${atributos} />` +
+  `<img class="img-jogo carregada baixa-res" src="${aspas(src)}" style="--nw:${largura}" alt="" ${atributos} />`;
 
 // <img> que tenta a melhor imagem e, se ela não existir, passa para a próxima da lista.
 // Fica transparente até uma delas carregar e aparece com um fade (as trocas não ficam visíveis).
@@ -113,29 +125,31 @@ export function imgJogo(p, tipo = 'cartao', atributos = 'loading="lazy"') {
   const fontes = fontesDaImagem(p, tipo);
   const chave = fontes[0];
   const certa = imagemQueFuncionou.get(chave);
-  if (certa) return `<img class="img-jogo carregada" src="${aspas(certa)}" onload="imagemCarregou(this)" alt="" ${atributos} />`;
+  if (certa) {
+    if (tipo === 'cartao' && miniaturas.has(certa)) return htmlMiniatura(certa, miniaturas.get(certa), atributos);
+    return `<img class="img-jogo carregada" src="${aspas(certa)}" alt="" ${atributos} />`;
+  }
   const [primeira, ...resto] = fontes;
-  return `<img class="img-jogo" src="${aspas(primeira)}" data-chave="${aspas(chave)}" data-alternativas="${aspas(resto.join('|'))}"
+  return `<img class="img-jogo" src="${aspas(primeira)}" data-chave="${aspas(chave)}" data-tipo="${tipo}" data-alternativas="${aspas(resto.join('|'))}"
     onload="imagemCarregou(this)" onerror="proximaImagem(this)" alt="" ${atributos} />`;
 }
 
 if (typeof window !== 'undefined') {
   window.imagemCarregou = (img) => {
+    img.onload = null;
+    const src = img.currentSrc || img.src;
+    if (img.dataset.chave) imagemQueFuncionou.set(img.dataset.chave, src);
+    // só nos cartões; decidido antes de aparecer, então não há salto visível
+    if (img.dataset.tipo === 'cartao' && !src.startsWith('data:') && img.closest('.jogo-capa')) {
+      const largura = img.closest('.jogo-capa').clientWidth || 300;
+      if (img.naturalWidth > 0 && img.naturalWidth < largura * 0.75) {
+        miniaturas.set(src, img.naturalWidth);
+        img.classList.add('baixa-res');
+        img.style.setProperty('--nw', img.naturalWidth);
+        img.insertAdjacentHTML('beforebegin', `<img class="img-desfocada" src="${aspas(src)}" alt="" aria-hidden="true" />`);
+      }
+    }
     img.classList.add('carregada');
-    if (img.dataset.chave) imagemQueFuncionou.set(img.dataset.chave, img.currentSrc || img.src);
-    marcarBaixaResolucao(img);
-  };
-  // Só existe a miniatura (jogo fora da Steam)? Em vez de esticá-la e borrar, mostra a imagem
-  // inteira, sem ampliar demais, sobre um fundo desfocado dela mesma.
-  const marcarBaixaResolucao = (img) => {
-    const capa = img.closest('.jogo-capa, .escolha-capa');
-    if (!capa || img.src.startsWith('data:')) return;
-    const largura = capa.clientWidth || 300;
-    const pequena = img.naturalWidth > 0 && img.naturalWidth < largura * 0.75;
-    capa.classList.toggle('capa-baixa-res', pequena);
-    if (!pequena) return;
-    capa.style.setProperty('--capa-fundo', `url("${(img.currentSrc || img.src).replaceAll('"', '%22')}")`);
-    capa.style.setProperty('--capa-largura', `${Math.round(Math.min(largura * 0.86, img.naturalWidth * 1.6))}px`);
   };
   window.proximaImagem = (img) => {
     const resto = (img.dataset.alternativas || '').split('|').filter(Boolean);
