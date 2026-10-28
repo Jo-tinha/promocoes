@@ -14,7 +14,7 @@ import {
   definirVideoDestaque,
   definirFixoDestaque,
 } from './destaques.js';
-import { abrirDestacar } from './admin-destacar.js';
+import { abrirDestacar, abrirTrocarImagens } from './admin-destacar.js';
 import { executarRodizio, aplicarRodizio, destaquesAutomaticos, tempoRestante, adicionarAutomaticamente, METRICAS, METRICA_PADRAO } from './rodizio.js';
 import { lerConfigRodizio } from './destaques.js';
 import { ATALHOS } from './atalhos-busca.js';
@@ -223,7 +223,7 @@ function linhaVitrine(p, posicao, total) {
         <button class="botao secundario pequeno" type="button" data-mover="-1" data-id="${esc(p.id)}" ${posicao === 0 ? 'disabled' : ''} aria-label="Subir">↑</button>
         <button class="botao secundario pequeno" type="button" data-mover="1" data-id="${esc(p.id)}" ${posicao === total - 1 ? 'disabled' : ''} aria-label="Descer">↓</button>
       </td>
-      <td><img class="miniatura" src="${esc(p.imagem)}" alt="" onerror="this.src='${IMAGEM_PADRAO}'" /></td>
+      <td><img class="miniatura" src="${esc(p.imagemCartao || p.imagem)}" alt="" onerror="this.src='${IMAGEM_PADRAO}'" /></td>
       <td><a href="${esc(p.link)}" target="_blank" rel="noopener"><strong>${esc(p.titulo)}</strong></a><br /><span class="secao-nota">${origem}${p.comentario ? ` · “${esc(p.comentario)}”` : ''}</span></td>
       <td>${precoCelula(p)}</td>
       <td>
@@ -239,7 +239,8 @@ function linhaVitrine(p, posicao, total) {
           ${
             p.manual
               ? `<button class="botao secundario pequeno" type="button" data-editar="${esc(p.id)}">Editar</button>`
-              : `<button class="botao secundario pequeno" type="button" data-comentar="${esc(p.id)}">Comentário</button>
+              : `<button class="botao secundario pequeno" type="button" data-imagens="${esc(p.id)}">${p.imagemCartao || p.imagemBanner ? '🖼 Imagens ✓' : '🖼 Imagens'}</button>
+                 <button class="botao secundario pequeno" type="button" data-comentar="${esc(p.id)}">Comentário</button>
                  <button class="botao secundario pequeno" type="button" data-atualizar="${esc(p.id)}">${mudou ? 'Salvar preço novo' : 'Atualizar preço'}</button>`
           }
           <button class="botao secundario pequeno" type="button" data-video="${esc(p.id)}" title="${p.video ? esc(p.video) : 'Sem link: usa o trailer da Steam'}">${p.video ? '🎬 Vídeo ✓' : '🎬 Vídeo'}</button>
@@ -418,6 +419,16 @@ export async function iniciarAveriguar() {
         console.error(erro);
         alert('Não foi possível salvar a nova ordem.');
         await carregarVitrineAdmin();
+      }
+      return;
+    }
+    const botaoImagens = e.target.closest('[data-imagens]');
+    if (botaoImagens) {
+      const p = naVitrine.find((x) => x.id === botaoImagens.dataset.imagens);
+      const salvo = await abrirTrocarImagens(p);
+      if (salvo) {
+        Object.assign(p, salvo);
+        desenharTabela();
       }
       return;
     }

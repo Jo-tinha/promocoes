@@ -1180,3 +1180,42 @@ iframe.trailer { height: auto; aspect-ratio: 16 / 9; min-height: 100%; top: 50%;
   .cartao-notificar-preco strong { font-size: 0.98rem; }
   .selo-seguindo { font-size: 0.64rem; padding: 2px 7px; }
 }
+
+/* Campo de imagem com resolução ideal e prévia (painel) */
+.destacar-imagens { display: grid; gap: 12px; }
+.campos-imagem-manual { display: grid; gap: 12px; }
+.campo-imagem {
+  display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 16px; align-items: start;
+  padding: 12px; border-radius: 12px; background: var(--cartao); border: 1px solid var(--linha);
+}
+.campo-imagem-texto { display: grid; gap: 6px; min-width: 0; }
+.campo-imagem-texto > strong { font-size: 0.92rem; }
+.campo-imagem-texto > small { color: var(--texto-suave); }
+.resolucao-ideal {
+  margin: 0; padding: 7px 10px; border-radius: 8px; font-size: 0.82rem; line-height: 1.45;
+  background: rgba(255, 210, 63, 0.1); border: 1px solid rgba(255, 210, 63, 0.35); color: #ffe7a3;
+}
+.resolucao-ideal b { color: #fff; font-size: 0.9rem; }
+.campo-imagem input[type='url'] {
+  width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--linha); background: var(--fundo); color: var(--texto); font: inherit;
+}
+.sugestoes-imagem { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.75rem; color: var(--texto-suave); }
+.sugestoes-imagem .chip { font-size: 0.75rem; padding: 4px 10px; }
+.situacao-imagem { margin: 0; font-size: 0.8rem; color: var(--texto-suave); }
+.situacao-imagem.nivel-ok { color: var(--verde); }
+.situacao-imagem.nivel-aviso { color: #ffd23f; }
+.situacao-imagem.nivel-erro { color: #ff8a80; }
+.previa-imagem {
+  position: relative; width: 100%; border-radius: 10px; overflow: hidden; background:
+    repeating-conic-gradient(#1c212c 0 25%, #151922 0 50%) 0 0 / 16px 16px;
+  border: 1px dashed var(--linha);
+}
+.previa-imagem img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.previa-vazia { position: absolute; inset: 0; display: grid; place-items: center; font-size: 0.8rem; color: var(--texto-suave); }
+.previa-medida {
+  position: absolute; right: 6px; bottom: 6px; padding: 2px 7px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.7); color: #fff; font-size: 0.68rem; font-weight: 700;
+}
+@media (max-width: 720px) {
+  .campo-imagem { grid-template-columns: 1fr; }
+}

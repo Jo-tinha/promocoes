@@ -91,6 +91,9 @@ function fontesDaImagem(p, tipo) {
   }
   const id = idSteam(p);
   const fontes = [];
+  // imagens escolhidas pelo admin num destaque da API (painel › Destaques › 🖼 Imagens)
+  if (tipo === 'banner') fontes.push(p.imagemBanner, p.imagemCartao);
+  else fontes.push(p.imagemCartao);
   if (id) {
     // caminho novo e o antigo do CDN da Steam (alguns jogos só têm um deles)
     if (tipo === 'banner') fontes.push(`${STEAM_CDN}/${id}/library_hero.jpg`, `${STEAM_CDN_ANTIGO}/${id}/library_hero.jpg`);
@@ -98,7 +101,7 @@ function fontesDaImagem(p, tipo) {
   }
   if (p.imagem) fontes.push(...versoesMaiores(p.imagem));
   fontes.push(PIXEL_VAZIO);
-  return [...new Set(fontes)];
+  return [...new Set(fontes.filter(Boolean))];
 }
 
 const aspas = (t) => String(t).replaceAll('&', '&amp;').replaceAll('"', '&quot;');
@@ -112,6 +115,10 @@ const miniaturas = new Map();
 
 // Primeira opção de imagem de um jogo — serve para saber se a imagem mudou de verdade
 export const chaveDaImagem = (p, tipo = 'cartao') => fontesDaImagem(p, tipo)[0];
+
+// Imagens automáticas (sem as trocadas pelo admin), em ordem de preferência — para as prévias do painel
+export const fontesAutomaticas = (p, tipo = 'cartao') =>
+  fontesDaImagem({ ...p, imagemCartao: '', imagemBanner: '' }, tipo).filter((u) => !u.startsWith('data:'));
 
 // Miniatura pequena: imagem inteira (sem ampliar demais) sobre uma cópia desfocada dela mesma,
 // em vez de esticada e borrada

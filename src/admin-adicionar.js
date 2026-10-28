@@ -5,6 +5,7 @@ import { contexto, carregarContexto } from './contexto.js';
 import { cartaoJogo, pilulaLoja, precos } from './cartoes.js';
 import { imgJogo } from './lojas.js';
 import { esc } from './util.js';
+import { campoImagem, ativarCamposImagem, imagemComErro } from './imagem-ideal.js';
 
 const form = document.querySelector('#form-manual');
 const titulo = document.querySelector('#titulo-form-manual');
@@ -15,6 +16,11 @@ const selectLoja = document.querySelector('#manual-loja');
 const campoLojaNome = document.querySelector('#campo-loja-nome');
 const previaCartao = document.querySelector('#previa-cartao');
 const previaBanner = document.querySelector('#previa-banner');
+
+// campos de imagem com a resolução ideal, prévia do recorte e conferência da imagem
+document.querySelector('#campos-imagem-manual').innerHTML =
+  campoImagem({ nome: 'imagem', tipo: 'cartao', obrigatorio: true }) + campoImagem({ nome: 'imagemBanner', tipo: 'banner' });
+const atualizarCamposImagem = () => form.querySelectorAll('[data-campo-imagem]').forEach((c) => c.atualizarImagem?.());
 
 let editandoId = null;
 let aoSalvar = () => {};
@@ -85,6 +91,7 @@ function modoNovo() {
   botaoSalvar.textContent = 'Adicionar aos destaques';
   botaoCancelar.hidden = true;
   atualizarPrevia();
+  atualizarCamposImagem();
 }
 
 // Chamado pela aba Destaques ao clicar em "Editar" num destaque manual
@@ -100,6 +107,7 @@ export function editarManual(d) {
   botaoCancelar.hidden = false;
   mostrar('');
   atualizarPrevia();
+  atualizarCamposImagem();
 }
 
 export async function iniciarAdicionar({ depoisDeSalvar } = {}) {
@@ -121,6 +129,7 @@ export async function iniciarAdicionar({ depoisDeSalvar } = {}) {
     const dados = lerFormulario();
     const erros = validarManual(dados);
     if (erros.length) return mostrar(erros.join(' '), 'erro');
+    if (imagemComErro(form)) return mostrar('Uma das imagens não abre. Confira o link.', 'erro');
     botaoSalvar.disabled = true;
     try {
       if (editandoId) {
@@ -145,5 +154,6 @@ export async function iniciarAdicionar({ depoisDeSalvar } = {}) {
     mostrar('');
   });
 
+  ativarCamposImagem(form, atualizarPrevia);
   atualizarPrevia();
 }

@@ -1,8 +1,9 @@
 // Janela do "★ Destacar": mostra os destaques atuais lado a lado para escolher qual o novo substitui
 // (ou entrar sem substituir), com comentário, vídeo (trailer) e a opção de fixar.
-import { destacar, removerDestaque } from './destaques.js';
+import { destacar, removerDestaque, definirImagensDestaque } from './destaques.js';
+import { campoImagem, ativarCamposImagem, imagemComErro } from './imagem-ideal.js';
 import { precoEmReal, nomeDaLoja } from './contexto.js';
-import { imgJogo, idSteam } from './lojas.js';
+import { imgJogo, idSteam, fontesAutomaticas } from './lojas.js';
 import { videoDoJogo, videoValido, idYoutube } from './trailer.js';
 import { tempoRestante, gravarAutomaticos } from './rodizio.js';
 import { esc, formatarReal } from './util.js';
@@ -46,7 +47,7 @@ export function abrirDestacar(promo, atuais) {
     // mesmo jogo já em destaque (em outra loja)? Os dois viram um cartão só, com "Escolher loja"
     const mesmoJogo = lista.filter((d) => !d.manual && nomeNormalizado(d.titulo) === nomeNormalizado(promo.titulo));
     dialogo.innerHTML = `
-      <form method="dialog" class="destacar-conteudo">
+      <form method="dialog" class="destacar-conteudo" novalidate>
         <header class="destacar-topo">
           <div class="destacar-novo">
             <span class="jogo-capa">${imgJogo(promo)}</span>
@@ -78,6 +79,13 @@ export function abrirDestacar(promo, atuais) {
           </div>
         </section>
 
+        <section class="destacar-imagens">
+          <h3>🖼 Imagens</h3>
+          <p class="secao-nota">Deixe vazio para usar a arte automática. Se ela estiver borrada ou cortada, troque por uma na resolução indicada.</p>
+          ${campoImagem({ nome: 'imagemCartao', tipo: 'cartao', automatica: fontesAutomaticas(promo, 'cartao'), jogo: promo })}
+          ${campoImagem({ nome: 'imagemBanner', tipo: 'banner', automatica: fontesAutomaticas(promo, 'banner'), jogo: promo })}
+        </section>
+
         <section class="destacar-campos">
           <label>Comentário <small>(opcional, aparece no cartão e no banner)</small>
             <input name="comentario" maxlength="140" placeholder="Ex.: Menor preço do ano" />
@@ -100,6 +108,7 @@ export function abrirDestacar(promo, atuais) {
     const confirmar = dialogo.querySelector('#confirmar-destacar');
     const campoVideo = form.elements.video;
     const situacaoVideo = dialogo.querySelector('#situacao-video');
+    ativarCamposImagem(dialogo);
     let substituir = '';
 
     const fechar = (resultado) => {
@@ -142,6 +151,11 @@ export function abrirDestacar(promo, atuais) {
       e.preventDefault();
       const erro = dialogo.querySelector('#erro-destacar');
       const video = campoVideo.value.trim();
+      if (imagemComErro(dialogo)) {
+        erro.textContent = 'Uma das imagens não abre. Corrija o link ou deixe o campo vazio para usar a automática.';
+        erro.hidden = false;
+        return;
+      }
       if (video && !videoValido(video)) {
         erro.textContent = 'O vídeo precisa ser um link do YouTube ou de um arquivo .mp4/.webm.';
         erro.hidden = false;
@@ -153,6 +167,8 @@ export function abrirDestacar(promo, atuais) {
       try {
         await destacar(promo, {
           comentario: form.elements.comentario.value,
+          imagemCartao: form.elements.imagemCartao.value,
+          imagemBanner: form.elements.imagemBanner.value,
           video,
           fixo: form.elements.fixo.checked,
           // substituindo: entra no lugar do outro; adicionando: no começo da lista
@@ -176,6 +192,68 @@ export function abrirDestacar(promo, atuais) {
       }
     });
 
+    dialogo.showModal();
+  });
+}
+
+// Trocar as imagens de um destaque que já está no ar (painel › Destaques › 🖼 Imagens)
+export function abrirTrocarImagens(d) {
+  return new Promise((resolver) => {
+    const dialogo = document.createElement('dialog');
+    dialogo.className = 'dialogo-destacar';
+    dialogo.innerHTML = `
+      <form method="dialog" class="destacar-conteudo" novalidate>
+        <header class="destacar-topo">
+          <div><span class="selo-tipo">Imagens do destaque</span><h2>${esc(d.titulo)}</h2></div>
+          <button class="escolha-fechar" type="button" data-cancelar aria-label="Fechar">×</button>
+        </header>
+        <section class="destacar-imagens">
+          <p class="secao-nota">Deixe vazio para usar a arte automática. A prévia mostra o recorte como aparece no site.</p>
+          ${campoImagem({ nome: 'imagemCartao', tipo: 'cartao', valor: d.imagemCartao || '', automatica: fontesAutomaticas(d, 'cartao'), jogo: d })}
+          ${campoImagem({ nome: 'imagemBanner', tipo: 'banner', valor: d.imagemBanner || '', automatica: fontesAutomaticas(d, 'banner'), jogo: d })}
+        </section>
+        <p class="mensagem erro" data-erro hidden></p>
+        <footer class="form-acoes">
+          <button class="botao secundario" type="button" data-cancelar>Cancelar</button>
+          <button class="botao" type="submit">Salvar imagens</button>
+        </footer>
+      </form>`;
+    document.body.append(dialogo);
+    const form = dialogo.querySelector('form');
+    const fechar = (r) => {
+      dialogo.close();
+      dialogo.remove();
+      resolver(r);
+    };
+    dialogo.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      fechar(false);
+    });
+    dialogo.addEventListener('click', (e) => {
+      if (e.target === dialogo || e.target.closest('[data-cancelar]')) fechar(false);
+    });
+    ativarCamposImagem(dialogo);
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const erro = dialogo.querySelector('[data-erro]');
+      if (imagemComErro(dialogo)) {
+        erro.textContent = 'Uma das imagens não abre. Corrija o link ou deixe o campo vazio.';
+        erro.hidden = false;
+        return;
+      }
+      const botao = form.querySelector('[type="submit"]');
+      botao.disabled = true;
+      try {
+        const dados = { imagemCartao: form.elements.imagemCartao.value, imagemBanner: form.elements.imagemBanner.value };
+        await definirImagensDestaque(d.id, dados);
+        fechar(dados);
+      } catch (falha) {
+        console.error(falha);
+        erro.textContent = 'Não foi possível salvar. Tente de novo.';
+        erro.hidden = false;
+        botao.disabled = false;
+      }
+    });
     dialogo.showModal();
   });
 }

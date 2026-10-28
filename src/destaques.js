@@ -13,7 +13,7 @@ const idDoc = (dealID) => dealID.replaceAll('/', '_');
 
 // C — Destacar. Opções: comentário, vídeo (link), fixo (fica fora do rodízio de 24 h),
 // e ordem/exibir (herdados do destaque substituído, para entrar no mesmo lugar)
-export async function destacar(p, { comentario = '', video = '', fixo = false, ordem, exibir = 'ambos' } = {}) {
+export async function destacar(p, { comentario = '', video = '', fixo = false, ordem, exibir = 'ambos', imagemCartao = '', imagemBanner = '' } = {}) {
   if (typeof arguments[1] === 'string') comentario = arguments[1];
   await setDoc(doc(db, 'destaques', idDoc(p.dealID)), {
     dealID: p.dealID,
@@ -32,6 +32,9 @@ export async function destacar(p, { comentario = '', video = '', fixo = false, o
     comentario: comentario.trim().slice(0, 140),
     video: video.trim(),
     fixo: Boolean(fixo),
+    // imagens trocadas pelo admin (vazio = arte automática da Steam/CheapShark)
+    imagemCartao: imagemCartao.trim(),
+    imagemBanner: imagemBanner.trim(),
     exibir,
     ativo: true,
     ...(ordem !== undefined && ordem !== null ? { ordem } : {}),
@@ -92,6 +95,10 @@ export async function lembrarDestacados(gameIDs) {
 // U — vídeo do destaque (YouTube, .mp4 ou .webm; vazio = trailer da Steam automático)
 export async function definirVideoDestaque(id, video) {
   return updateDoc(doc(db, 'destaques', id), { video: video.trim(), atualizadoEm: serverTimestamp() });
+}
+// U — imagens do cartão e do banner (vazio = automática)
+export async function definirImagensDestaque(id, { imagemCartao = '', imagemBanner = '' }) {
+  return updateDoc(doc(db, 'destaques', id), { imagemCartao: imagemCartao.trim(), imagemBanner: imagemBanner.trim(), atualizadoEm: serverTimestamp() });
 }
 // U — fixo = não sai no rodízio de 24 h
 export async function definirFixoDestaque(id, fixo) {
