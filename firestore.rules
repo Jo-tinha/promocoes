@@ -21,6 +21,12 @@ service cloud.firestore {
       allow create, update, delete: if admin();
     }
 
+    // Rodízio de destaques: métrica escolhida e jogos destacados há pouco (para não repetir)
+    match /config/{id} {
+      allow read: if true;
+      allow write: if admin();
+    }
+
     // Catálogo "Games": todo jogo que já apareceu em promoção. Público para leitura.
     // Usuários logados gravam os jogos que veem, mas só com estes campos e tipos.
     function jogoValido(id) {

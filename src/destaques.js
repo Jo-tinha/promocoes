@@ -1,6 +1,6 @@
 // Destaques: promoções escolhidas a dedo pelo admin (coleção "destaques").
 // Também mantém "jogos": todo jogo que já foi destaque, para a lista do Notificar.
-import { collection, doc, getDocs, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, addDoc, updateDoc, deleteDoc, writeBatch, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from './firebase.js';
 import { buscarOfertasDosJogos, linkDaPromocao } from './api.js';
 import { idPromocao } from './util.js';
@@ -11,8 +11,10 @@ const colJogos = collection(db, 'jogos');
 // IDs de documento não podem ter "/"
 const idDoc = (dealID) => dealID.replaceAll('/', '_');
 
-// C — Destacar
-export async function destacar(p, comentario = '') {
+// C — Destacar. Opções: comentário, vídeo (link), fixo (fica fora do rodízio de 24 h),
+// e ordem/exibir (herdados do destaque substituído, para entrar no mesmo lugar)
+export async function destacar(p, { comentario = '', video = '', fixo = false, ordem, exibir = 'ambos' } = {}) {
+  if (typeof arguments[1] === 'string') comentario = arguments[1];
   await setDoc(doc(db, 'destaques', idDoc(p.dealID)), {
     dealID: p.dealID,
     gameID: p.gameID,
@@ -27,10 +29,17 @@ export async function destacar(p, comentario = '') {
     avaliacaoPct: p.avaliacaoPct || 0,
     metacritic: p.metacritic || 0,
     link: p.link,
-    comentario: comentario.trim(),
+    comentario: comentario.trim().slice(0, 140),
+    video: video.trim(),
+    fixo: Boolean(fixo),
+    exibir,
+    ativo: true,
+    ...(ordem !== undefined && ordem !== null ? { ordem } : {}),
+    noArDesde: serverTimestamp(),
     criadoEm: serverTimestamp(),
     atualizadoEm: serverTimestamp(),
   });
+  await lembrarDestacados([p.gameID]);
   if (p.gameID) {
     await setDoc(
       doc(db, 'jogos', p.gameID),
@@ -50,6 +59,45 @@ export async function destacar(p, comentario = '') {
   }
 }
 
+// ---------- Rodízio de 24 h ----------
+// Jogos que já foram destaque recentemente (para o rodízio não repetir): documento config/rodizio
+const docRodizio = doc(db, 'config', 'rodizio');
+export async function lerConfigRodizio() {
+  try {
+    const snap = await getDoc(docRodizio);
+    return snap.exists() ? snap.data() : {};
+  } catch {
+    return {};
+  }
+}
+export async function jaDestacados() {
+  return (await lerConfigRodizio()).jogos || [];
+}
+// métrica usada pelo rodízio (a última escolhida no "Adicionar automaticamente")
+export async function salvarMetricaRodizio(metrica) {
+  return setDoc(docRodizio, { metrica, atualizadoEm: serverTimestamp() }, { merge: true });
+}
+export async function lembrarDestacados(gameIDs) {
+  const novos = gameIDs.filter(Boolean).map(String);
+  if (!novos.length) return;
+  try {
+    const atuais = await jaDestacados();
+    const jogos = [...new Set([...novos, ...atuais])].slice(0, 150);
+    await setDoc(docRodizio, { jogos, atualizadoEm: serverTimestamp() }, { merge: true });
+  } catch (erro) {
+    console.warn('Não foi possível guardar o histórico do rodízio', erro);
+  }
+}
+
+// U — vídeo do destaque (YouTube, .mp4 ou .webm; vazio = trailer da Steam automático)
+export async function definirVideoDestaque(id, video) {
+  return updateDoc(doc(db, 'destaques', id), { video: video.trim(), atualizadoEm: serverTimestamp() });
+}
+// U — fixo = não sai no rodízio de 24 h
+export async function definirFixoDestaque(id, fixo) {
+  return updateDoc(doc(db, 'destaques', id), { fixo, atualizadoEm: serverTimestamp() });
+}
+
 // R
 function destaquesDoSnapshot(snap) {
   // o link é refeito a partir do ID (destaques antigos podiam ter o ID codificado duas vezes)
@@ -63,6 +111,8 @@ function destaquesDoSnapshot(snap) {
       link,
       ativo: dados.ativo !== false, // destaques antigos não têm o campo: contam como ativos
       exibir: dados.exibir || 'ambos', // 'ambos' | 'banner' | 'faixa'
+      // desde quando está no ar (destaques antigos usam a data de criação), em milissegundos
+      noArMs: (dados.noArDesde || dados.criadoEm)?.toMillis?.() ?? Date.now(),
     };
   });
   // quem tem "ordem" vem primeiro, na ordem escolhida; o resto, do mais novo para o mais antigo
@@ -155,6 +205,8 @@ function manualParaFirestore(dados) {
     termina: dados.termina || null, // 'AAAA-MM-DD' ou null
     exibir: dados.exibir || 'ambos',
     ativo: dados.ativo !== false,
+    video: (dados.video || '').trim(),
+    fixo: Boolean(dados.fixo),
   };
 }
 
@@ -164,6 +216,7 @@ export function validarManual(dados) {
   if (!dados.titulo.trim()) erros.push('Informe o título.');
   if (!url(dados.imagem)) erros.push('A imagem do cartão precisa ser um link http(s).');
   if (dados.imagemBanner.trim() && !url(dados.imagemBanner)) erros.push('A imagem do banner precisa ser um link http(s).');
+  if ((dados.video || '').trim() && !url(dados.video)) erros.push('O vídeo precisa ser um link http(s) (YouTube, .mp4 ou .webm).');
   if (!url(dados.link)) erros.push('O link de destino precisa começar com http:// ou https://.');
   const normal = dados.precoNormal === '' ? null : Number(dados.precoNormal);
   const promo = dados.precoPromocional === '' ? null : Number(dados.precoPromocional);
@@ -176,7 +229,13 @@ export function validarManual(dados) {
 
 // C
 export async function criarDestaqueManual(dados) {
-  return addDoc(colDestaques, { ...manualParaFirestore(dados), ordem: -Date.now() / 1e6, criadoEm: serverTimestamp(), atualizadoEm: serverTimestamp() });
+  return addDoc(colDestaques, {
+    ...manualParaFirestore(dados),
+    ordem: -Date.now() / 1e6,
+    noArDesde: serverTimestamp(),
+    criadoEm: serverTimestamp(),
+    atualizadoEm: serverTimestamp(),
+  });
 }
 
 // U

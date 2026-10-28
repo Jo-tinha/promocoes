@@ -11,7 +11,14 @@ import {
   alternarAtivoDestaque,
   definirExibicaoDestaque,
   salvarOrdemDestaques,
+  definirVideoDestaque,
+  definirFixoDestaque,
 } from './destaques.js';
+import { abrirDestacar } from './admin-destacar.js';
+import { executarRodizio, tempoRestante, adicionarAutomaticamente, METRICAS, METRICA_PADRAO } from './rodizio.js';
+import { lerConfigRodizio } from './destaques.js';
+import { ATALHOS } from './atalhos-busca.js';
+import { videoValido } from './trailer.js';
 import { editarManual } from './admin-adicionar.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
 import { esc, IMAGEM_PADRAO, formatarReal } from './util.js';
@@ -64,15 +71,92 @@ function renderizarChegando() {
     : '<div class="aviso">Nada novo por aqui com esses filtros.</div>';
 }
 
-async function buscarChegando() {
+// Filtros da busca (os mesmos do Explorar)
+const PADRAO = { termo: '', loja: '', ordem: 'Recent', max: '', desc: '', steam: '', mc: '', aaa: false, gratis: false };
+let pagina = 0;
+
+function lerFiltros() {
   const f = formFiltros.elements;
-  listaAveriguar.innerHTML = '<div class="aviso">Consultando a CheapShark…</div>';
+  return {
+    termo: f.termo.value.trim(),
+    loja: f.loja.value,
+    ordem: f.ordem.value,
+    max: f.max.value ? Number(f.max.value) : '',
+    desc: f.desc.value ? Number(f.desc.value) : 0,
+    steam: f.steam.value,
+    mc: f.mc.value,
+    aaa: f.aaa.checked,
+    gratis: f.gratis.checked,
+  };
+}
+
+function aplicarFiltros(valores) {
+  const f = formFiltros.elements;
+  const v = { ...PADRAO, termo: f.termo.value, ...valores };
+  f.termo.value = v.termo;
+  f.loja.value = v.loja;
+  f.ordem.value = v.ordem;
+  f.max.value = v.max;
+  f.desc.value = v.desc;
+  f.steam.value = v.steam;
+  f.mc.value = v.mc;
+  f.aaa.checked = Boolean(v.aaa);
+  f.gratis.checked = Boolean(v.gratis);
+}
+
+const temFiltro = (f) => f.loja || f.max || f.desc || f.steam || f.mc || f.aaa || f.gratis || f.ordem !== PADRAO.ordem;
+
+function atalhoAtivo(f) {
+  return ATALHOS.find((a) => {
+    const v = { ...PADRAO, ...a.filtros };
+    return (
+      v.ordem === f.ordem && String(v.max) === String(f.max) && String(v.desc || '') === String(f.desc || '') &&
+      String(v.steam) === String(f.steam) && String(v.mc) === String(f.mc) && Boolean(v.aaa) === f.aaa &&
+      Boolean(v.gratis) === f.gratis && !f.loja
+    );
+  });
+}
+
+function desenharAtalhos() {
+  const ativo = atalhoAtivo(lerFiltros());
+  document.querySelector('#atalhos-averiguar').innerHTML = ATALHOS.map(
+    (a) => `<button type="button" class="chip" data-atalho="${a.id}" aria-pressed="${ativo?.id === a.id}">${a.rotulo}</button>`,
+  ).join('');
+  document.querySelector('#limpar-averiguar').hidden = !temFiltro(lerFiltros());
+}
+
+async function buscarChegando({ mais = false } = {}) {
+  const f = lerFiltros();
+  const botaoMais = document.querySelector('#mais-averiguar');
+  desenharAtalhos();
+  if (!mais) {
+    pagina = 0;
+    listaAveriguar.innerHTML = '<div class="aviso">Consultando a CheapShark…</div>';
+  }
+  botaoMais.disabled = true;
   try {
-    chegando = await buscarPromocoes({ termo: f.termo.value.trim(), lojaId: f.loja.value, ordem: f.ordem.value, limite: 60 });
+    const precoMaximo = f.gratis ? 0 : f.max && contexto.cotacao ? Math.max(1, Math.ceil(f.max / contexto.cotacao)) : null;
+    const novos = await buscarPromocoes({
+      termo: f.termo,
+      lojaId: f.loja,
+      ordem: f.ordem,
+      limite: 60,
+      pagina,
+      precoMaximo,
+      steamMin: Number(f.steam) || 0,
+      metacriticMin: Number(f.mc) || 0,
+      aaa: f.aaa,
+    });
+    const filtrados = novos.filter((p) => p.desconto >= (f.desc || 0)).filter((p) => !f.gratis || p.precoPromocional === 0);
+    const vistos = new Set(chegando.map((p) => p.dealID));
+    chegando = mais ? [...chegando, ...filtrados.filter((p) => !vistos.has(p.dealID))] : filtrados;
+    botaoMais.hidden = novos.length < 60;
     renderizarChegando();
   } catch (erro) {
     console.error(erro);
-    listaAveriguar.innerHTML = '<div class="aviso erro">Não foi possível consultar a CheapShark agora.</div>';
+    if (!mais) listaAveriguar.innerHTML = '<div class="aviso erro">Não foi possível consultar a CheapShark agora.</div>';
+  } finally {
+    botaoMais.disabled = false;
   }
 }
 
@@ -83,8 +167,16 @@ function situacao(p) {
   if (p.emPromocao === undefined) return '<span class="status off">conferindo…</span>';
   if (!p.emPromocao) return `<span class="status encerrada">${p.manual ? 'Data passou' : 'Encerrada'}</span>`;
   if (p.precoMudou) return '<span class="status mudou">Preço mudou</span>';
-  if (p.manual && p.termina) return `<span class="status ok">Até ${p.termina.split('-').reverse().join('/')}</span>`;
-  return '<span class="status ok">No ar</span>';
+  const rodizio = p.fixo ? '📌 Fixo' : `sai em ${horasEMin(tempoRestante(p))}`;
+  if (p.manual && p.termina) return `<span class="status ok">Até ${p.termina.split('-').reverse().join('/')}</span><br /><span class="secao-nota">${rodizio}</span>`;
+  return `<span class="status ok">No ar</span><br /><span class="secao-nota">${rodizio}</span>`;
+}
+
+function horasEMin(ms) {
+  if (ms <= 0) return 'instantes (rodízio)';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h ? `${h} h ${m} min` : `${m} min`;
 }
 
 const valor = (p, v) => (p.moeda === 'BRL' ? formatarReal(v) : precoEmReal(v));
@@ -127,6 +219,8 @@ function linhaVitrine(p, posicao, total) {
               : `<button class="botao secundario pequeno" type="button" data-comentar="${esc(p.id)}">Comentário</button>
                  <button class="botao secundario pequeno" type="button" data-atualizar="${esc(p.id)}">${mudou ? 'Salvar preço novo' : 'Atualizar preço'}</button>`
           }
+          <button class="botao secundario pequeno" type="button" data-video="${esc(p.id)}" title="${p.video ? esc(p.video) : 'Sem link: usa o trailer da Steam'}">${p.video ? '🎬 Vídeo ✓' : '🎬 Vídeo'}</button>
+          <button class="botao secundario pequeno" type="button" data-fixar="${esc(p.id)}" aria-pressed="${Boolean(p.fixo)}">${p.fixo ? '📌 Fixo' : 'Fixar'}</button>
           <button class="botao secundario pequeno" type="button" data-pausar="${esc(p.id)}">${p.ativo ? 'Pausar' : 'Ativar'}</button>
           <button class="botao perigo pequeno" type="button" data-remover="${esc(p.id)}">Remover</button>
         </div>
@@ -169,7 +263,28 @@ function desenharTabela() {
   document.dispatchEvent(new CustomEvent('destaques-mudaram', { detail: naVitrine }));
 }
 
-export async function carregarVitrineAdmin() {
+// Rodízio de 24 h gravado no Firestore (só o admin pode escrever): roda ao abrir o painel e a cada 5 min
+let rodando = false;
+async function rodarRodizio() {
+  if (rodando) return;
+  rodando = true;
+  try {
+    const conferidos = await conferirDestaquesAoVivo((await listarDestaques()).filter((d) => d.ativo));
+    const trocas = await executarRodizio(conferidos.filter((d) => d.emPromocao));
+    if (trocas.length) {
+      notaVitrine.textContent = `Rodízio: ${trocas.map((t) => `“${t.saiu.titulo}” → “${t.entrou.titulo}”`).join(', ')}`;
+      await carregarVitrineAdmin({ semRodizio: true });
+      renderizarChegando();
+    }
+  } catch (erro) {
+    console.warn('Rodízio não rodou agora', erro);
+  } finally {
+    rodando = false;
+  }
+}
+
+export async function carregarVitrineAdmin({ semRodizio = false } = {}) {
+  if (!semRodizio) rodarRodizio();
   try {
     naVitrine = await listarDestaques();
     desenharTabela();
@@ -207,26 +322,39 @@ export async function iniciarAveriguar() {
   });
   formFiltros.elements.soNovas.addEventListener('change', renderizarChegando);
 
-  // C — aprovar
+  // atalhos e filtros
+  document.querySelector('#atalhos-averiguar').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-atalho]');
+    if (!chip) return;
+    const atalho = ATALHOS.find((a) => a.id === chip.dataset.atalho);
+    const jaAtivo = chip.getAttribute('aria-pressed') === 'true';
+    aplicarFiltros(jaAtivo ? {} : atalho.filtros);
+    buscarChegando();
+  });
+  formFiltros.addEventListener('change', (e) => {
+    if (e.target.name === 'soNovas') return;
+    if (e.target.name !== 'termo') buscarChegando();
+  });
+  document.querySelector('#limpar-averiguar').addEventListener('click', () => {
+    aplicarFiltros({});
+    buscarChegando();
+  });
+  document.querySelector('#mais-averiguar').addEventListener('click', () => {
+    pagina += 1;
+    buscarChegando({ mais: true });
+  });
+
+  // C — destacar: janela com os destaques atuais lado a lado para escolher qual substituir
   listaAveriguar.addEventListener('click', async (e) => {
     const botao = e.target.closest('[data-aprovar]');
     if (!botao) return;
     const promo = chegando.find((p) => p.dealID === botao.dataset.aprovar);
     botao.disabled = true;
-    const comentario = prompt(`Por que "${promo.titulo}" merece destaque? (opcional, aparece no cartão)`, '');
-    if (comentario === null) {
-      botao.disabled = false;
-      return;
-    }
-    try {
-      await destacar(promo, comentario.slice(0, 140));
+    const destacou = await abrirDestacar(promo, naVitrine);
+    if (destacou) {
       await carregarVitrineAdmin();
       renderizarChegando();
-    } catch (erro) {
-      console.error(erro);
-      alert('Não foi possível destacar. Confira se sua conta está na coleção "admins".');
-      botao.disabled = false;
-    }
+    } else botao.disabled = false;
   });
 
   document.querySelector('#busca-destaques').addEventListener('input', desenharTabela);
@@ -264,6 +392,40 @@ export async function iniciarAveriguar() {
         console.error(erro);
         alert('Não foi possível salvar a nova ordem.');
         await carregarVitrineAdmin();
+      }
+      return;
+    }
+    const botaoVideo = e.target.closest('[data-video]');
+    if (botaoVideo) {
+      const p = naVitrine.find((x) => x.id === botaoVideo.dataset.video);
+      const novo = prompt(
+        `Vídeo de "${p.titulo}" (toca sem som quando passam o mouse).\nLink do YouTube, .mp4 ou .webm. Deixe vazio para usar o trailer da Steam.`,
+        p.video || '',
+      );
+      if (novo === null) return;
+      if (novo.trim() && !videoValido(novo)) return alert('Use um link do YouTube ou de um arquivo .mp4/.webm.');
+      try {
+        await definirVideoDestaque(p.id, novo);
+        p.video = novo.trim();
+        desenharTabela();
+      } catch (erro) {
+        console.error(erro);
+        alert('Não foi possível salvar o vídeo.');
+      }
+      return;
+    }
+    const fixar = e.target.closest('[data-fixar]');
+    if (fixar) {
+      const p = naVitrine.find((x) => x.id === fixar.dataset.fixar);
+      fixar.disabled = true;
+      try {
+        await definirFixoDestaque(p.id, !p.fixo);
+        p.fixo = !p.fixo;
+        desenharTabela();
+      } catch (erro) {
+        console.error(erro);
+        alert('Não foi possível mudar. Tente de novo.');
+        fixar.disabled = false;
       }
       return;
     }
@@ -385,6 +547,50 @@ export async function iniciarAveriguar() {
     }
   });
 
+  iniciarAutomatico();
   await carregarVitrineAdmin();
+  setInterval(rodarRodizio, 5 * 60 * 1000);
   await buscarChegando();
+}
+
+// ---------- Adicionar automaticamente ----------
+async function iniciarAutomatico() {
+  const form = document.querySelector('#form-auto');
+  const nota = document.querySelector('#nota-auto');
+  const selMetrica = document.querySelector('#auto-metrica');
+  selMetrica.innerHTML = Object.entries(METRICAS)
+    .map(([id, m]) => `<option value="${id}">${m.rotulo}</option>`)
+    .join('');
+  document.querySelector('#auto-loja').insertAdjacentHTML(
+    'beforeend',
+    [...contexto.lojas.values()].map((l) => `<option value="${esc(l.id)}">${esc(l.nome)}</option>`).join(''),
+  );
+  const config = await lerConfigRodizio();
+  selMetrica.value = METRICAS[config.metrica] ? config.metrica : METRICA_PADRAO;
+  nota.textContent = `Rodízio usando: ${METRICAS[selMetrica.value].rotulo}`;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const botao = form.querySelector('button[type="submit"]');
+    botao.disabled = true;
+    nota.textContent = 'Escolhendo os melhores…';
+    try {
+      const atuais = (await listarDestaques()).filter((d) => d.ativo);
+      const novos = await adicionarAutomaticamente(atuais, {
+        metrica: form.elements.metrica.value,
+        quantidade: Number(form.elements.quantidade.value),
+        lojaId: form.elements.loja.value,
+      });
+      nota.textContent = novos.length
+        ? `✓ ${novos.length} adicionado${novos.length > 1 ? 's' : ''}: ${novos.map((p) => p.titulo).join(', ')}`
+        : 'Nenhum jogo novo nessa métrica (os melhores já estão nos destaques).';
+      await carregarVitrineAdmin({ semRodizio: true });
+      renderizarChegando();
+    } catch (erro) {
+      console.error(erro);
+      nota.textContent = 'Não foi possível adicionar agora. Tente de novo.';
+    } finally {
+      botao.disabled = false;
+    }
+  });
 }

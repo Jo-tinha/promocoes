@@ -1,4 +1,5 @@
 // Partes comuns a todas as páginas: rodapé, aviso de cookies (LGPD) e botão "voltar ao topo"
+import { ativarTrailers } from './trailer.js';
 
 const CHAVE_CONSENTIMENTO = 'buba-consentimento';
 const VERSAO_POLITICA = '2026-10-27';
@@ -227,5 +228,6 @@ export function iniciarSite() {
   montarRodape();
   montarVoltarAoTopo();
   ativarRodinhaHorizontal();
+  ativarTrailers(); // trailer ao passar o mouse nos cartões
   if (!lerConsentimento()) montarAvisoCookies();
 }

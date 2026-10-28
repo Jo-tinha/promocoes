@@ -8,7 +8,9 @@ import { abrirEscolha } from './escolher-loja.js';
 import { salvarNoCatalogo } from './catalogo.js';
 import { buscarPromocoes, buscarGratis } from './api.js';
 import { contexto, carregarContexto, nomeDaLoja, precoEmReal } from './contexto.js';
-import { ORDEM_LOJAS, varsDaLoja, imgJogo, chaveDaImagem } from './lojas.js';
+import { ORDEM_LOJAS, varsDaLoja, imgJogo, chaveDaImagem, idSteam } from './lojas.js';
+import { pararTrailer } from './trailer.js';
+import { aplicarRodizio } from './rodizio.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
 
 const $ = (s) => document.querySelector(s);
@@ -127,6 +129,12 @@ function renderizarBillboard(novos) {
     atual = n;
     const p = itens[n];
     elBillboard.querySelector('.billboard-texto').classList.toggle('sem-animacao', suave);
+    if (!suave) pararTrailer();
+    // trailer ao passar o mouse no banner (o do destaque que está aparecendo)
+    const video = p.video || p.ofertas?.map((o) => o.video).find(Boolean) || '';
+    elBillboard.dataset.steam = p.manual ? '' : idSteam(p) || '';
+    if (video) elBillboard.dataset.video = video;
+    else delete elBillboard.dataset.video;
     estado.promos.set(p.dealID, p);
     if (p.agrupado) p.ofertas.forEach((o) => estado.promos.set(o.dealID, o));
     elBillboard.classList.remove('vazio');
@@ -169,7 +177,8 @@ function renderizarBillboard(novos) {
   const reiniciar = () => {
     clearInterval(rotacao);
     if (itens.length > 1) {
-      rotacao = setInterval(() => mostrar((atual + 1) % itens.length), 8000);
+      // com o mouse em cima (vendo o trailer) o banner não troca sozinho
+      rotacao = setInterval(() => !elBillboard.matches(':hover') && mostrar((atual + 1) % itens.length), 8000);
       // pré-carrega as imagens dos próximos, para a troca ser instantânea
       itens.forEach((it) => {
         const t = document.createElement('template');
@@ -228,8 +237,15 @@ async function conferirAgora() {
   try {
     const conferidos = await conferirDestaquesAoVivo(base);
     if (vez !== conferindo) return; // chegou uma lista mais nova enquanto conferia
-    const ativos = conferidos.filter((d) => d.emPromocao);
+    let ativos = conferidos.filter((d) => d.emPromocao);
     const encerrados = conferidos.length - ativos.length;
+    // rodízio: quem completou 24 h no ar dá lugar a uma promoção nova (igual para todos os destaques)
+    try {
+      ativos = (await aplicarRodizio(ativos)).lista;
+    } catch (erro) {
+      console.warn('Rodízio indisponível agora', erro);
+    }
+    if (vez !== conferindo) return;
     guardarDestaques(ativos);
     if (!ativos.length) return semDestaques();
     desenharDestaques(ativos);

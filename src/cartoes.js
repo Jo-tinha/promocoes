@@ -1,6 +1,6 @@
 // Peças visuais compartilhadas: cartão de jogo, pílula da loja, metadados, preços e esqueletos
 import { contexto, precoEmReal } from './contexto.js';
-import { varsDaLoja, lojaPelaPlataforma, imgJogo } from './lojas.js';
+import { varsDaLoja, lojaPelaPlataforma, imgJogo, idSteam } from './lojas.js';
 import { botaoEstrela } from './estrela.js';
 import { esc, formatarReal } from './util.js';
 
@@ -33,12 +33,16 @@ export function precos(p) {
   </div>`;
 }
 
+// Dados para o trailer ao passar o mouse (src/trailer.js)
+export const atributosTrailer = (p) =>
+  `data-steam="${esc(p.manual ? '' : idSteam(p) || '')}"${p.video ? ` data-video="${esc(p.video)}"` : ''}`;
+
 // especial = lista que mistura lojas (Destaques, Grátis, Busca, Games): mostra a logo da loja pequena no topo
 export function cartaoJogo(p, { especial = false, i = 0 } = {}) {
   const lojaId = p.lojaId || lojaPelaPlataforma(p.plataformas);
   const gratis = p.precoPromocional === 0;
   return `
-    <article class="jogo" data-deal="${esc(p.dealID)}" style="${varsDaLoja(lojaId)};--i:${Math.min(i, 20)}">
+    <article class="jogo" data-deal="${esc(p.dealID)}" ${atributosTrailer(p)} style="${varsDaLoja(lojaId)};--i:${Math.min(i, 20)}">
       <a class="jogo-capa" href="${esc(p.link)}" target="_blank" rel="noopener sponsored" tabindex="-1">
         ${imgJogo(p)}
         ${especial ? pilulaLoja(lojaId, p.lojaNome || p.plataformas) : ''}
@@ -85,7 +89,17 @@ export function redesenharEstrelas(buscarPromo) {
 }
 
 // ---------- Jogo em várias lojas: um cartão só ----------
-const chaveDoJogo = (p) => (p.manual ? p.dealID : p.gameID) || String(p.titulo).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+// O mesmo jogo pode ter IDs diferentes na CheapShark em cada loja; por isso a chave é o nome
+// normalizado (sem acento, ™, ®, pontuação e espaços extras). Destaques feitos à mão ficam separados.
+export const nomeNormalizado = (t) =>
+  String(t || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[™®©]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+const chaveDoJogo = (p) => (p.manual ? `manual-${p.dealID}` : nomeNormalizado(p.titulo) || p.gameID || p.dealID);
 
 // Junta as promoções do mesmo jogo, mantendo a ordem em que cada jogo apareceu primeiro.
 // Devolve itens normais (1 loja) e grupos { agrupado: true, ofertas: [...] } (2+ lojas).
@@ -96,7 +110,14 @@ export function agruparPorJogo(lista) {
     if (!grupos.has(k)) grupos.set(k, []);
     grupos.get(k).push(p);
   }
-  return [...grupos.values()].map((ofertas) => {
+  return [...grupos.values()].map((todas) => {
+    // uma oferta por loja (a mais barata), para o mesmo jogo não aparecer duas vezes na mesma loja
+    const porLoja = new Map();
+    for (const o of todas) {
+      const k = o.lojaId || o.dealID;
+      if (!porLoja.has(k) || o.precoPromocional < porLoja.get(k).precoPromocional) porLoja.set(k, o);
+    }
+    const ofertas = todas.filter((o) => porLoja.get(o.lojaId || o.dealID) === o);
     if (ofertas.length === 1) return ofertas[0];
     const base = ofertas[0];
     const precosPromo = ofertas.map((o) => o.precoPromocional);
@@ -128,7 +149,7 @@ function logosDasLojas(ofertas) {
 
 export function cartaoAgrupado(g, { i = 0 } = {}) {
   return `
-    <article class="jogo jogo-agrupado" data-deal="${esc(g.dealID)}" data-escolher="${esc(g.dealID)}" style="--i:${Math.min(i, 20)}">
+    <article class="jogo jogo-agrupado" data-deal="${esc(g.dealID)}" ${atributosTrailer({ ...g, video: g.video || g.ofertas.map((o) => o.video).find(Boolean) })} data-escolher="${esc(g.dealID)}" style="--i:${Math.min(i, 20)}">
       <button class="jogo-capa" type="button" data-escolher="${esc(g.dealID)}" tabindex="-1" aria-hidden="true">
         ${imgJogo(g)}
         ${logosDasLojas(g.ofertas)}

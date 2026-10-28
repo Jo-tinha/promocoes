@@ -89,9 +89,20 @@ export async function abrirEscolha(jogo) {
   if (!jogo.gameID) return renderizar(jogo, conhecidas, { destacadas });
   try {
     // preços atuais de todas as lojas onde o jogo está à venda
-    const atual = await buscarOfertasDoJogo(jogo.gameID);
-    const emPromocao = atual.ofertas.filter((o) => o.precoPromocional < o.precoNormal || destacadas.has(idPromocao(o.dealID)));
-    const lista = emPromocao.length ? emPromocao : atual.ofertas;
+    // o mesmo jogo pode ter mais de um ID na CheapShark (um por loja): consulta todos e junta
+    const ids = [...new Set([jogo.gameID, ...jogo.ofertas.map((o) => o.gameID)].filter(Boolean))];
+    const respostas = await Promise.all(ids.map((id) => buscarOfertasDoJogo(id)));
+    const atual = respostas[0];
+    const vistas = new Map();
+    for (const o of respostas.flatMap((r) => r.ofertas)) vistas.set(idPromocao(o.dealID), o);
+    for (const o of conhecidas) if (!vistas.has(idPromocao(o.dealID))) vistas.set(idPromocao(o.dealID), o);
+    const todas = [...vistas.values()];
+    // uma linha por loja (a mais barata)
+    const porLoja = new Map();
+    for (const o of todas) if (!porLoja.has(o.lojaId) || o.precoPromocional < porLoja.get(o.lojaId).precoPromocional) porLoja.set(o.lojaId, o);
+    const unicas = [...porLoja.values()].sort((a, b) => a.precoPromocional - b.precoPromocional);
+    const emPromocao = unicas.filter((o) => o.precoPromocional < o.precoNormal || destacadas.has(idPromocao(o.dealID)));
+    const lista = emPromocao.length ? emPromocao : unicas;
     if (dialogo.open) renderizar({ ...jogo, steamAppID: jogo.steamAppID || atual.steamAppID }, lista, { destacadas, historico: atual.menorPrecoHistorico });
   } catch (erro) {
     console.error(erro);

@@ -98,7 +98,11 @@ A barra fica no cabeçalho de todas as páginas: sugestões com capa e menor pre
 ## Painel do admin
 
 - **Resumo** no topo: destaques ativos, pausados, adicionados à mão, recomendações de hoje e jogos no catálogo.
-- **Averiguar promoções**: promoções que chegam da CheapShark, com "★ Destacar".
+- **Averiguar promoções**: promoções que chegam da CheapShark, com os mesmos atalhos e filtros do Explorar (aclamados, avaliados na Steam, descontos, AAA, preço, notas, "Carregar mais") e "★ Destacar".
+- **★ Destacar** abre uma janela com os destaques atuais lado a lado: escolha qual o novo **substitui** (herda posição e onde aparece) ou adicione sem tirar ninguém; com comentário, **vídeo** e **📌 Fixo**. Se o jogo já está em destaque em outra loja, as lojas são atreladas a um cartão só ("Escolher loja").
+- **⚡ Adicionar automaticamente**: escolha uma métrica de qualidade (custo-benefício, Metacritic, avaliação na Steam, descontos com nota boa, AAA) e quantos; os melhores entram no topo.
+- **Rodízio de 24 h**: todo destaque que não é fixo sai depois de 24 horas no ar e dá lugar ao próximo melhor da métrica escolhida (sem diferença entre destaques automáticos e escolhidos à mão). A vitrine já mostra a troca para todos; o painel grava a troca no Firestore ao abrir e a cada 5 minutos (`src/rodizio.js`, documento `config/rodizio`).
+- **Trailer ao passar o mouse**: nos cartões e no banner, depois de um instante com o mouse em cima, toca o vídeo atrelado (YouTube, .mp4 ou .webm) ou o trailer curto da Steam, via `api/trailer.js`.
 - **Destaques**: ordem (↑ ↓), onde aparece (banner e faixa, só banner ou só faixa), pausar/ativar sem apagar, editar comentário, situação ao vivo (no ar, preço mudou, encerrada), salvar preço novo, remover encerrados, filtros e busca.
 - **＋ Adicionar**: destaque criado à mão para algo que não vem da API (jogo de outra loja, evento, anúncio): título, imagens do cartão e do banner, link, loja, preço em R$ (opcional), texto do botão, comentário, data de término e onde aparece, com pré-visualização ao vivo.
 - **Recomendações diárias**: CRUD do catálogo de jogos, notícias e eventos.
