@@ -47,10 +47,28 @@ export function lojaPelaPlataforma(texto = '') {
   return '';
 }
 
-// Capas da Steam vêm pequenas na CheapShark; a versão "header" tem 460×215
-export function imagemGrande(url = '') {
-  return url.replace(/capsule_sm_120\.jpg/, 'header.jpg');
+// As miniaturas da CheapShark são pequenas. Para cada loja conhecida, tenta versões maiores
+// da mesma imagem (a miniatura original fica por último, como garantia).
+export function versoesMaiores(url = '') {
+  if (!url) return [];
+  const versoes = [];
+  // Steam: capsule_sm_120 / capsule_184x69 / capsule_231x87 → header (460×215)
+  if (/steamstatic|steampowered|steamcdn/.test(url)) {
+    versoes.push(url.replace(/capsule_(sm_120|184x69|231x87|231x87_alt_assets_\d+)\.jpg/, 'header.jpg'));
+  }
+  // GOG: o sufixo (_196, _100 etc.) define o tamanho; sem ele vem a imagem original
+  const gog = url.match(/^(https?:\/\/images[-\d]*\.gog(?:-statics)?\.com\/[0-9a-f]+)(?:_[\w]+)?\.(?:jpg|png|webp)/i);
+  if (gog) versoes.push(`${gog[1]}_product_card_v2_mobile_slider_639.jpg`, `${gog[1]}.jpg`);
+  // Epic: o CDN aceita redimensionar pela URL
+  if (/cdn\d*\.epicgames\.com|epicgames\.com\/offer/.test(url)) {
+    const base = url.split('?')[0];
+    versoes.push(`${base}?h=480&quality=high&resize=1&w=854`);
+  }
+  versoes.push(url);
+  return [...new Set(versoes)];
 }
+
+export const imagemGrande = (url = '') => versoesMaiores(url)[0] || url;
 
 // ---------- Imagens em alta resolução ----------
 // A CheapShark informa o ID do jogo na Steam (steamAppID), mesmo quando a promoção é de outra loja.
@@ -78,7 +96,7 @@ function fontesDaImagem(p, tipo) {
     if (tipo === 'banner') fontes.push(`${STEAM_CDN}/${id}/library_hero.jpg`, `${STEAM_CDN_ANTIGO}/${id}/library_hero.jpg`);
     fontes.push(`${STEAM_CDN}/${id}/capsule_616x353.jpg`, `${STEAM_CDN_ANTIGO}/${id}/capsule_616x353.jpg`, `${STEAM_CDN}/${id}/header.jpg`);
   }
-  if (p.imagem) fontes.push(imagemGrande(p.imagem));
+  if (p.imagem) fontes.push(...versoesMaiores(p.imagem));
   fontes.push(PIXEL_VAZIO);
   return [...new Set(fontes)];
 }
@@ -95,7 +113,7 @@ export function imgJogo(p, tipo = 'cartao', atributos = 'loading="lazy"') {
   const fontes = fontesDaImagem(p, tipo);
   const chave = fontes[0];
   const certa = imagemQueFuncionou.get(chave);
-  if (certa) return `<img class="img-jogo carregada" src="${aspas(certa)}" alt="" ${atributos} />`;
+  if (certa) return `<img class="img-jogo carregada" src="${aspas(certa)}" onload="imagemCarregou(this)" alt="" ${atributos} />`;
   const [primeira, ...resto] = fontes;
   return `<img class="img-jogo" src="${aspas(primeira)}" data-chave="${aspas(chave)}" data-alternativas="${aspas(resto.join('|'))}"
     onload="imagemCarregou(this)" onerror="proximaImagem(this)" alt="" ${atributos} />`;
@@ -105,6 +123,19 @@ if (typeof window !== 'undefined') {
   window.imagemCarregou = (img) => {
     img.classList.add('carregada');
     if (img.dataset.chave) imagemQueFuncionou.set(img.dataset.chave, img.currentSrc || img.src);
+    marcarBaixaResolucao(img);
+  };
+  // Só existe a miniatura (jogo fora da Steam)? Em vez de esticá-la e borrar, mostra a imagem
+  // inteira, sem ampliar demais, sobre um fundo desfocado dela mesma.
+  const marcarBaixaResolucao = (img) => {
+    const capa = img.closest('.jogo-capa, .escolha-capa');
+    if (!capa || img.src.startsWith('data:')) return;
+    const largura = capa.clientWidth || 300;
+    const pequena = img.naturalWidth > 0 && img.naturalWidth < largura * 0.75;
+    capa.classList.toggle('capa-baixa-res', pequena);
+    if (!pequena) return;
+    capa.style.setProperty('--capa-fundo', `url("${(img.currentSrc || img.src).replaceAll('"', '%22')}")`);
+    capa.style.setProperty('--capa-largura', `${Math.round(Math.min(largura * 0.86, img.naturalWidth * 1.6))}px`);
   };
   window.proximaImagem = (img) => {
     const resto = (img.dataset.alternativas || '').split('|').filter(Boolean);

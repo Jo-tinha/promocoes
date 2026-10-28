@@ -968,3 +968,16 @@ td.ordem .botao { padding: 4px 8px; }
 .billboard-fundo .camada img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
 .billboard-texto .billboard-conteudo { animation: subir 0.5s ease both; }
 @media (prefers-reduced-motion: reduce) { .billboard-fundo .camada { transition: none; } }
+
+/* Capa só com miniatura pequena: imagem inteira sobre um fundo desfocado (em vez de esticada e borrada) */
+.capa-baixa-res { isolation: isolate; }
+.capa-baixa-res::before {
+  content: ''; position: absolute; inset: -24px; z-index: -1;
+  background: var(--capa-fundo) center / cover no-repeat;
+  filter: blur(22px) saturate(1.3) brightness(0.55);
+}
+.capa-baixa-res > img.img-jogo {
+  position: absolute; inset: 0; margin: auto; width: var(--capa-largura, 70%); height: auto; max-height: 86%;
+  object-fit: contain; border-radius: 6px; box-shadow: 0 6px 22px rgba(0,0,0,0.55);
+}
+.escolha-capa.capa-baixa-res { overflow: hidden; }
