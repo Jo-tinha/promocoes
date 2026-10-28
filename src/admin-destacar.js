@@ -8,6 +8,7 @@ import { videoDoJogo, videoValido, idYoutube } from './trailer.js';
 import { tempoRestante, gravarAutomaticos } from './rodizio.js';
 import { esc, formatarReal } from './util.js';
 import { nomeNormalizado } from './cartoes.js';
+import { editorComentario, ativarEditores } from './texto-rico.js';
 
 const valor = (p, v) => (p.moeda === 'BRL' ? formatarReal(v) : precoEmReal(v));
 
@@ -87,9 +88,9 @@ export function abrirDestacar(promo, atuais) {
         </section>
 
         <section class="destacar-campos">
-          <label>Comentário <small>(opcional, aparece no cartão e no banner)</small>
-            <input name="comentario" maxlength="140" placeholder="Ex.: Menor preço do ano" />
-          </label>
+          <div class="campo-editor"><strong>Comentário</strong> <small>(opcional, aparece no cartão e no banner)</small>
+            ${editorComentario({ nome: 'comentario' })}
+          </div>
           <label>Vídeo <small>(opcional — YouTube, .mp4 ou .webm; toca quando passam o mouse)</small>
             <input name="video" type="url" placeholder="${idSteam(promo) ? 'Vazio = trailer da Steam automático' : 'https://www.youtube.com/watch?v=…'}" />
           </label>
@@ -109,6 +110,7 @@ export function abrirDestacar(promo, atuais) {
     const campoVideo = form.elements.video;
     const situacaoVideo = dialogo.querySelector('#situacao-video');
     ativarCamposImagem(dialogo);
+    ativarEditores(dialogo);
     let substituir = '';
 
     const fechar = (resultado) => {

@@ -4,6 +4,7 @@ import { collection, doc, getDoc, getDocs, onSnapshot, setDoc, addDoc, updateDoc
 import { db } from './firebase.js';
 import { buscarOfertasDosJogos, linkDaPromocao } from './api.js';
 import { idPromocao } from './util.js';
+import { LIMITE_COMENTARIO } from './texto-rico.js';
 
 const colDestaques = collection(db, 'destaques');
 const colJogos = collection(db, 'jogos');
@@ -29,7 +30,7 @@ export async function destacar(p, { comentario = '', video = '', fixo = false, o
     avaliacaoPct: p.avaliacaoPct || 0,
     metacritic: p.metacritic || 0,
     link: p.link,
-    comentario: comentario.trim().slice(0, 140),
+    comentario: comentario.trim().slice(0, LIMITE_COMENTARIO),
     video: video.trim(),
     fixo: Boolean(fixo),
     // imagens trocadas pelo admin (vazio = arte automática da Steam/CheapShark)
@@ -183,7 +184,7 @@ export async function conferirDestaquesAoVivo(destaques) {
 
 // U — comentário do admin
 export async function editarComentarioDestaque(id, comentario) {
-  return atualizarDestaque(id, { comentario: comentario.trim().slice(0, 140) });
+  return atualizarDestaque(id, { comentario: comentario.trim().slice(0, LIMITE_COMENTARIO) });
 }
 
 // ---------- Destaques manuais (criados no painel, não vêm da API) ----------
@@ -210,7 +211,7 @@ function manualParaFirestore(dados) {
     precoPromocional: promo,
     desconto: normal && promo !== null && normal > 0 ? Math.max(0, Math.round((1 - promo / normal) * 100)) : 0,
     textoBotao: dados.textoBotao.trim() || 'Ver oferta',
-    comentario: dados.comentario.trim().slice(0, 140),
+    comentario: dados.comentario.trim().slice(0, LIMITE_COMENTARIO),
     termina: dados.termina || null, // 'AAAA-MM-DD' ou null
     exibir: dados.exibir || 'ambos',
     ativo: dados.ativo !== false,

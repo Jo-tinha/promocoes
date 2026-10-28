@@ -23,6 +23,7 @@ import { editarManual } from './admin-adicionar.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
 import { esc, IMAGEM_PADRAO, formatarReal } from './util.js';
 import { sincronizarCatalogo } from './catalogo.js';
+import { textoSimples, abrirEditorComentario } from './texto-rico.js';
 
 const formFiltros = document.querySelector('#filtros-averiguar');
 const selectLoja = document.querySelector('#averiguar-loja');
@@ -224,7 +225,7 @@ function linhaVitrine(p, posicao, total) {
         <button class="botao secundario pequeno" type="button" data-mover="1" data-id="${esc(p.id)}" ${posicao === total - 1 ? 'disabled' : ''} aria-label="Descer">↓</button>
       </td>
       <td><img class="miniatura" src="${esc(p.imagemCartao || p.imagem)}" alt="" onerror="this.src='${IMAGEM_PADRAO}'" /></td>
-      <td><a href="${esc(p.link)}" target="_blank" rel="noopener"><strong>${esc(p.titulo)}</strong></a><br /><span class="secao-nota">${origem}${p.comentario ? ` · “${esc(p.comentario)}”` : ''}</span></td>
+      <td><a href="${esc(p.link)}" target="_blank" rel="noopener"><strong>${esc(p.titulo)}</strong></a><br /><span class="secao-nota">${origem}${p.comentario ? ` · “${esc(textoSimples(p.comentario))}”` : ''}</span></td>
       <td>${precoCelula(p)}</td>
       <td>
         <select class="select-exibir" data-exibir="${esc(p.id)}" aria-label="Onde aparece">
@@ -490,7 +491,7 @@ export async function iniciarAveriguar() {
     const comentar = e.target.closest('[data-comentar]');
     if (comentar) {
       const promo = naVitrine.find((p) => p.id === comentar.dataset.comentar);
-      const novo = prompt(`Comentário do destaque "${promo.titulo}" (aparece no cartão e no banner):`, promo.comentario || '');
+      const novo = await abrirEditorComentario({ titulo: promo.titulo, valor: promo.comentario || '' });
       if (novo === null) return;
       try {
         await editarComentarioDestaque(promo.id, novo);

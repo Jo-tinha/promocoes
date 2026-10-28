@@ -6,6 +6,7 @@ import { cartaoJogo, pilulaLoja, precos } from './cartoes.js';
 import { imgJogo } from './lojas.js';
 import { esc } from './util.js';
 import { campoImagem, ativarCamposImagem, imagemComErro } from './imagem-ideal.js';
+import { renderizarComentario, editorComentario, ativarEditores } from './texto-rico.js';
 
 const form = document.querySelector('#form-manual');
 const titulo = document.querySelector('#titulo-form-manual');
@@ -20,7 +21,11 @@ const previaBanner = document.querySelector('#previa-banner');
 // campos de imagem com a resolução ideal, prévia do recorte e conferência da imagem
 document.querySelector('#campos-imagem-manual').innerHTML =
   campoImagem({ nome: 'imagem', tipo: 'cartao', obrigatorio: true }) + campoImagem({ nome: 'imagemBanner', tipo: 'banner' });
-const atualizarCamposImagem = () => form.querySelectorAll('[data-campo-imagem]').forEach((c) => c.atualizarImagem?.());
+document.querySelector('#editor-comentario-manual').innerHTML = editorComentario({ nome: 'comentario', placeholder: 'Aparece no cartão e no banner' });
+const atualizarCamposImagem = () => {
+  form.querySelectorAll('[data-campo-imagem]').forEach((c) => c.atualizarImagem?.());
+  form.querySelectorAll('[data-editor]').forEach((e) => e.atualizarEditor?.());
+};
 
 let editandoId = null;
 let aoSalvar = () => {};
@@ -73,7 +78,7 @@ function atualizarPrevia() {
         ${p.desconto >= 1 ? `<span class="desconto" style="position:static">-${p.desconto}%</span>` : ''}
       </div>
       <h1>${esc(p.titulo)}</h1>
-      ${p.comentario ? `<p>${esc(p.comentario)}</p>` : ''}
+      ${p.comentario ? `<div class="billboard-comentario comentario-rico">${renderizarComentario(p.comentario)}</div>` : ''}
       ${precos(p)}
       <div class="billboard-acoes"><span class="botao">${esc(p.textoBotao)}</span></div>
     </div>`;
@@ -155,5 +160,6 @@ export async function iniciarAdicionar({ depoisDeSalvar } = {}) {
   });
 
   ativarCamposImagem(form, atualizarPrevia);
+  ativarEditores(form, atualizarPrevia);
   atualizarPrevia();
 }

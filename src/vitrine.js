@@ -12,6 +12,7 @@ import { ORDEM_LOJAS, varsDaLoja, imgJogo, chaveDaImagem, idSteam } from './loja
 import { pararTrailer } from './trailer.js';
 import { vitrineComoAparece, destaquesAutomaticos } from './rodizio.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
+import { renderizarComentario } from './texto-rico.js';
 
 const $ = (s) => document.querySelector(s);
 
@@ -148,7 +149,7 @@ function renderizarBillboard(novos) {
           ${p.agrupado ? (p.maiorDesconto >= 1 ? `<span class="desconto" style="position:static">até -${p.maiorDesconto}%</span>` : '') : p.desconto >= 1 ? `<span class="desconto" style="position:static">-${p.desconto}%</span>` : ''}
         </div>
         <h1>${esc(p.titulo)}</h1>
-        ${p.comentario ? `<p>${esc(p.comentario)}</p>` : ''}
+        ${p.comentario ? `<div class="billboard-comentario comentario-rico">${renderizarComentario(p.comentario)}</div>` : ''}
         ${metas(p)}
         ${
           p.agrupado

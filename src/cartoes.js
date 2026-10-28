@@ -3,6 +3,7 @@ import { contexto, precoEmReal } from './contexto.js';
 import { varsDaLoja, lojaPelaPlataforma, imgJogo, idSteam } from './lojas.js';
 import { botaoEstrela } from './estrela.js';
 import { esc, formatarReal } from './util.js';
+import { renderizarComentario } from './texto-rico.js';
 
 export function pilulaLoja(lojaId, textoAlternativo = '') {
   const loja = contexto.lojas.get(lojaId);
@@ -50,7 +51,7 @@ export function cartaoJogo(p, { especial = false, i = 0 } = {}) {
       </a>
       <div class="jogo-corpo">
         <h3 title="${esc(p.titulo)}">${esc(p.titulo)}</h3>
-        ${p.comentario ? `<p class="comentario-dedo">“${esc(p.comentario)}”</p>` : ''}
+        ${p.comentario ? `<div class="comentario-dedo comentario-rico">${renderizarComentario(p.comentario)}</div>` : ''}
         ${metas(p)}
         ${precos(p)}
         <div class="jogo-rodape">
@@ -157,7 +158,7 @@ export function cartaoAgrupado(g, { i = 0 } = {}) {
       </button>
       <div class="jogo-corpo">
         <h3 title="${esc(g.titulo)}">${esc(g.titulo)}</h3>
-        ${g.comentario ? `<p class="comentario-dedo">“${esc(g.comentario)}”</p>` : ''}
+        ${g.comentario ? `<div class="comentario-dedo comentario-rico">${renderizarComentario(g.comentario)}</div>` : ''}
         ${metas(g)}
         <div class="precos">
           <span class="preco-legenda">média</span>
