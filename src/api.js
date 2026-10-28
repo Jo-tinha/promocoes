@@ -292,3 +292,27 @@ export async function ajustarPrecosBR(lista) {
   }
   return lista;
 }
+
+// ---------- Relevância ----------
+// "Mais relevantes": o quanto o jogo importa na plataforma, e não só o preço.
+// Popularidade (nº de avaliações na Steam, em escala log) + nota na Steam + Metacritic + um pouco do desconto.
+export function relevancia(p) {
+  const popularidade = Math.log10((p.avaliacoes || 0) + 1); // 0 a ~6,5 (milhões de avaliações)
+  const nota = p.avaliacaoPct ? (p.avaliacaoPct - 50) / 50 : 0; // -1 a 1
+  const critica = p.metacritic ? (p.metacritic - 60) / 40 : 0; // ~-1 a 1
+  return popularidade * 1.6 + nota * 2 + critica * 1.5 + (p.desconto || 0) / 100;
+}
+
+export const ordenarPorRelevancia = (lista) => [...lista].sort((a, b) => relevancia(b) - relevancia(a));
+
+// Promoções mais relevantes de uma loja: junta as de melhor custo-benefício com as mais bem avaliadas
+// e ordena pela relevância (assim jogos grandes e populares aparecem antes de jogos obscuros baratos)
+export async function buscarMaisRelevantes({ lojaId = '', limite = 20, termo = '' } = {}) {
+  const [custo, avaliados] = await Promise.all([
+    buscarPromocoes({ lojaId, termo, ordem: 'Deal Rating', limite: 60 }),
+    buscarPromocoes({ lojaId, termo, ordem: 'Reviews', limite: 60 }).catch(() => []),
+  ]);
+  const unicos = new Map();
+  for (const p of [...custo, ...avaliados]) if (!unicos.has(p.dealID)) unicos.set(p.dealID, p);
+  return ordenarPorRelevancia([...unicos.values()]).slice(0, limite);
+}

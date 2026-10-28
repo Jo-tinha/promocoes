@@ -6,7 +6,7 @@ import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela } from '
 import { cartaoJogo as cartaoBase, cartaoAgrupado, agruparPorJogo, pilulaLoja, metas, precos, precosAgrupados, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
 import { abrirEscolha } from './escolher-loja.js';
 import { salvarNoCatalogo } from './catalogo.js';
-import { buscarPromocoes, buscarGratis } from './api.js';
+import { buscarPromocoes, buscarGratis, buscarMaisRelevantes } from './api.js';
 import { contexto, carregarContexto, nomeDaLoja, precoEmReal } from './contexto.js';
 import { ORDEM_LOJAS, varsDaLoja, imgJogo, chaveDaImagem, idSteam } from './lojas.js';
 import { pararTrailer } from './trailer.js';
@@ -429,7 +429,8 @@ async function carregarFaixaLoja(lojaId) {
     ${setas}<div class="trilho">${esqueletos(4, true)}</div>`;
   elFaixasLojas.append(secao);
   try {
-    const lista = await buscarPromocoes({ lojaId, ordem: 'Deal Rating', limite: 20 });
+    // ordem por relevância na plataforma (popularidade + notas), não só pelo preço
+    const lista = await buscarMaisRelevantes({ lojaId, limite: 20 });
     if (!lista.length) return secao.remove();
     secao.querySelector('.contagem-faixa').textContent = `até -${Math.max(...lista.map((p) => p.desconto))}%`;
     secao.querySelector('.trilho').innerHTML =

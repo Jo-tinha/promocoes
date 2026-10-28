@@ -1,7 +1,7 @@
 // Página de uma loja: todas as promoções dela numa grade de tela cheia
 import './style.css';
 import { iniciarSessao } from './sessao.js';
-import { buscarPromocoes } from './api.js';
+import { buscarPromocoes, buscarMaisRelevantes, ordenarPorRelevancia } from './api.js';
 import { contexto, carregarContexto, nomeDaLoja } from './contexto.js';
 import { varsDaLoja } from './lojas.js';
 import { cartaoJogo, esqueletos, redesenharEstrelas } from './cartoes.js';
@@ -14,7 +14,7 @@ const botaoMais = $('#carregar-mais');
 const POR_PAGINA = 60;
 
 const lojaId = new URLSearchParams(location.search).get('id') || '1';
-const estado = { pagina: 0, termo: '', ordem: 'Deal Rating', promos: new Map(), total: 0, carregando: false };
+const estado = { pagina: 0, termo: '', ordem: 'relevancia', promos: new Map(), total: 0, carregando: false };
 
 async function carregarPagina({ reiniciar = false } = {}) {
   if (estado.carregando) return;
@@ -26,7 +26,15 @@ async function carregarPagina({ reiniciar = false } = {}) {
   }
   botaoMais.hidden = true;
   try {
-    const lista = await buscarPromocoes({ lojaId, termo: estado.termo, ordem: estado.ordem, limite: POR_PAGINA, pagina: estado.pagina });
+    // "Mais relevantes": a 1ª página junta custo-benefício + mais bem avaliados e ordena por relevância;
+    // as seguintes vêm por custo-benefício, ordenadas por relevância dentro da página
+    const relevancia = estado.ordem === 'relevancia';
+    let lista;
+    if (relevancia && estado.pagina === 0) lista = await buscarMaisRelevantes({ lojaId, termo: estado.termo, limite: 120 });
+    else {
+      lista = await buscarPromocoes({ lojaId, termo: estado.termo, ordem: relevancia ? 'Deal Rating' : estado.ordem, limite: POR_PAGINA, pagina: estado.pagina });
+      if (relevancia) lista = ordenarPorRelevancia(lista.filter((p) => !estado.promos.has(p.dealID)));
+    }
     lista.forEach((p) => estado.promos.set(p.dealID, p));
     salvarNoCatalogo(lista);
     const html = lista.map((p, i) => cartaoJogo(p, { i })).join('');
@@ -34,7 +42,7 @@ async function carregarPagina({ reiniciar = false } = {}) {
     else grade.insertAdjacentHTML('beforeend', html);
     estado.total += lista.length;
     estado.pagina += 1;
-    botaoMais.hidden = lista.length < POR_PAGINA;
+    botaoMais.hidden = lista.length < (relevancia && estado.pagina === 1 ? 20 : POR_PAGINA);
     $('#nota-loja').textContent = `${estado.total}${botaoMais.hidden ? '' : '+'} promoções${estado.termo ? ` para “${estado.termo}”` : ''}`;
   } catch (erro) {
     console.error(erro);
