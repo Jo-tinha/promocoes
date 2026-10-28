@@ -86,6 +86,7 @@ function prepararBanner() {
 }
 
 let fundoAtual = '';
+const DURACAO_DESLIZE = 1600; // ms (igual ao CSS de .billboard-fundo .camada)
 function trocarFundoDoBanner(p) {
   const chave = chaveDaImagem(p, 'banner');
   if (chave === fundoAtual) return; // mesma imagem: não mexe
@@ -96,9 +97,25 @@ function trocarFundoDoBanner(p) {
   const proxima = visivel === a ? b : a;
   proxima.innerHTML = html;
   const img = proxima.querySelector('img');
+  let feito = false;
+  // o novo entra pela esquerda e empurra o anterior para a direita, devagar
   const mostrar = () => {
+    if (feito) return;
+    feito = true;
+    const tinhaOutro = visivel.classList.contains('ativa');
+    proxima.classList.remove('saindo', 'sem-transicao');
     proxima.classList.add('ativa');
+    if (!tinhaOutro) return;
     visivel.classList.remove('ativa');
+    visivel.classList.add('saindo');
+    clearTimeout(visivel._volta);
+    // depois que saiu pela direita, volta escondido para a esquerda (sem animar), pronto para o próximo
+    visivel._volta = setTimeout(() => {
+      visivel.classList.add('sem-transicao');
+      visivel.classList.remove('saindo');
+      void visivel.offsetWidth;
+      visivel.classList.remove('sem-transicao');
+    }, DURACAO_DESLIZE + 100);
   };
   if (img.complete && img.naturalWidth) mostrar();
   else {
@@ -179,7 +196,7 @@ function renderizarBillboard(novos) {
     clearInterval(rotacao);
     if (itens.length > 1) {
       // com o mouse em cima (vendo o trailer) o banner não troca sozinho
-      rotacao = setInterval(() => !elBillboard.matches(':hover') && mostrar((atual + 1) % itens.length), 8000);
+      rotacao = setInterval(() => !elBillboard.matches(':hover') && mostrar((atual + 1) % itens.length), 9000);
       // pré-carrega as imagens dos próximos, para a troca ser instantânea
       itens.forEach((it) => {
         const t = document.createElement('template');
