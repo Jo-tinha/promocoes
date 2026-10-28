@@ -1,6 +1,6 @@
 import './style.css';
 import { iniciarSessao } from './sessao.js';
-import { ouvirDestaques, conferirDestaquesAoVivo } from './destaques.js';
+import { ouvirDestaques, conferirDestaquesAoVivo, comTodasAsLojas } from './destaques.js';
 import { listarRecomendacoes, TIPOS } from './recomendacoes.js';
 import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela } from './estrela.js';
 import { cartaoJogo as cartaoBase, cartaoAgrupado, agruparPorJogo, pilulaLoja, metas, precos, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
@@ -246,6 +246,8 @@ async function conferirAgora() {
     } catch (erro) {
       console.warn('Rodízio indisponível agora', erro);
     }
+    // cada destaque com todas as lojas em que o jogo está em promoção (preço médio + "Escolher loja")
+    ativos = await comTodasAsLojas(ativos);
     if (vez !== conferindo) return;
     guardarDestaques(ativos);
     if (!ativos.length) return semDestaques();
@@ -352,7 +354,7 @@ function atualizarCartoesNoLugar(trilho, html) {
 
 async function semDestaquesNoBanner() {
   try {
-    renderizarBillboard(agruparPorJogo(await destaquesAutomaticos(5, { excluir: estado.destaques || [] })));
+    renderizarBillboard(agruparPorJogo(await comTodasAsLojas(await destaquesAutomaticos(5, { excluir: estado.destaques || [] }))));
   } catch (erro) {
     console.error(erro);
   }
@@ -362,7 +364,7 @@ async function semDestaquesNoBanner() {
 // do mesmo jeito que os destaques escolhidos (banner e faixa)
 async function semDestaques() {
   try {
-    const automaticos = await destaquesAutomaticos(5);
+    const automaticos = await comTodasAsLojas(await destaquesAutomaticos(5));
     if (!automaticos.length) throw new Error('sem promoções para completar');
     guardarDestaques(automaticos);
     desenharDestaques(automaticos);

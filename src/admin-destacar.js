@@ -4,7 +4,7 @@ import { destacar, removerDestaque } from './destaques.js';
 import { precoEmReal, nomeDaLoja } from './contexto.js';
 import { imgJogo, idSteam } from './lojas.js';
 import { videoDoJogo, videoValido, idYoutube } from './trailer.js';
-import { tempoRestante } from './rodizio.js';
+import { tempoRestante, gravarAutomaticos } from './rodizio.js';
 import { esc, formatarReal } from './util.js';
 import { nomeNormalizado } from './cartoes.js';
 
@@ -18,9 +18,7 @@ function horas(ms) {
 
 function cartaoAtual(d) {
   const restante = tempoRestante(d);
-  const situacao = d.emAlta
-    ? 'no banner enquanto não houver destaque'
-    : !d.ativo
+  const situacao = !d.ativo
       ? 'Pausado'
       : d.fixo
         ? '📌 Fixo'
@@ -158,13 +156,16 @@ export function abrirDestacar(promo, atuais) {
           video,
           fixo: form.elements.fixo.checked,
           // substituindo: entra no lugar do outro; adicionando: no começo da lista
-          ordem: alvo && !alvo.emAlta ? alvo.ordem ?? -Date.now() / 1e6 : -Date.now() / 1e6,
-          exibir: alvo && !alvo.emAlta ? alvo.exibir || 'ambos' : 'ambos',
+          ordem: alvo ? alvo.ordem ?? -Date.now() / 1e6 : -Date.now() / 1e6,
+          exibir: alvo?.exibir || 'ambos',
         });
-        // destaque automático do rodízio (ainda não gravado): sai o que ele substituiu
-        // "Em alta" (banner sem destaques): não há o que remover, ele some quando entra um destaque
+        // destaque automático (ainda só na tela): se veio do rodízio, sai o que ele substituiu;
+        // se completava a vitrine, não há documento para apagar
         if (alvo?.substitui) await removerDestaque(alvo.substitui.id);
-        else if (alvo && !alvo.emAlta) await removerDestaque(alvo.id);
+        else if (alvo && !alvo.automatico) await removerDestaque(alvo.id);
+        // os outros automáticos que estavam na tela são gravados, para a vitrine continuar igual
+        for (const d of lista.filter((x) => x.substitui && x !== alvo)) await removerDestaque(d.substitui.id);
+        await gravarAutomaticos(lista, { exceto: alvo?.id });
         fechar(true);
       } catch (falha) {
         console.error(falha);

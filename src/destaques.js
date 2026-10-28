@@ -163,6 +163,8 @@ export async function conferirDestaquesAoVivo(destaques) {
     if (!agora) return { ...d, emPromocao: false };
     return {
       ...d,
+      // as outras lojas onde o mesmo jogo também está em promoção agora
+      outrasLojas: ofertas.filter((o) => String(o.gameID) === String(d.gameID) && idPromocao(o.dealID) !== idPromocao(d.dealID)),
       precoNormal: agora.precoNormal,
       precoPromocional: agora.precoPromocional,
       desconto: agora.desconto,
@@ -258,4 +260,44 @@ export async function salvarOrdemDestaques(ids) {
   const lote = writeBatch(db);
   ids.forEach((id, i) => lote.update(doc(db, 'destaques', id), { ordem: i }));
   return lote.commit();
+}
+
+// Vitrine: cada destaque aparece com TODAS as lojas onde o jogo está em promoção agora
+// (vira um cartão só, com o preço médio e "Escolher loja"), mesmo que o admin tenha destacado uma loja só.
+// Os destaques que ainda não têm essa informação (rodízio, automáticos) são consultados de uma vez.
+export async function comTodasAsLojas(lista) {
+  const faltam = [...new Set(lista.filter((d) => !d.manual && d.gameID && !d.outrasLojas).map((d) => String(d.gameID)))];
+  let extras = [];
+  try {
+    extras = faltam.length ? await buscarOfertasDosJogos(faltam) : [];
+  } catch (erro) {
+    console.warn('Não foi possível buscar as outras lojas', erro);
+  }
+  const jaTem = new Set(lista.filter((d) => !d.manual).map((d) => `${d.gameID}|${d.lojaId}`));
+  const resultado = [];
+  for (const d of lista) {
+    resultado.push(d);
+    if (d.manual || !d.gameID) continue;
+    const ofertas = d.outrasLojas ?? extras.filter((o) => String(o.gameID) === String(d.gameID));
+    for (const o of ofertas) {
+      const chave = `${d.gameID}|${o.lojaId}`;
+      if (o.lojaId === d.lojaId || jaTem.has(chave)) continue;
+      jaTem.add(chave);
+      resultado.push({
+        ...o,
+        titulo: d.titulo,
+        imagem: d.imagem,
+        steamAppID: d.steamAppID || o.steamAppID,
+        comentario: d.comentario,
+        video: d.video,
+        exibir: d.exibir,
+        ordem: d.ordem,
+        ativo: true,
+        emPromocao: true,
+        noArMs: d.noArMs,
+        outraLojaDe: d.id, // só na tela: não é um documento do Firestore
+      });
+    }
+  }
+  return resultado;
 }
