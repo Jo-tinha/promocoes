@@ -1062,3 +1062,4 @@ iframe.trailer { height: auto; aspect-ratio: 16 / 9; min-height: 100%; top: 50%;
 .auto-destaques label { display: grid; gap: 5px; font-size: 0.75rem; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.05em; }
 .auto-destaques select { padding: 9px 10px; border-radius: 9px; border: 1px solid var(--linha); background: var(--fundo); color: var(--texto); min-width: 120px; text-transform: none; font-size: 0.9rem; }
 .auto-destaques #nota-auto { flex: 1 1 100%; margin: 0; }
+.dialogo-destacar :focus:not(:focus-visible) { outline: none; box-shadow: none; }

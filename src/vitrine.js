@@ -10,7 +10,7 @@ import { buscarPromocoes, buscarGratis } from './api.js';
 import { contexto, carregarContexto, nomeDaLoja, precoEmReal } from './contexto.js';
 import { ORDEM_LOJAS, varsDaLoja, imgJogo, chaveDaImagem, idSteam } from './lojas.js';
 import { pararTrailer } from './trailer.js';
-import { aplicarRodizio } from './rodizio.js';
+import { vitrineComoAparece, destaquesAutomaticos } from './rodizio.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
 
 const $ = (s) => document.querySelector(s);
@@ -240,8 +240,9 @@ async function conferirAgora() {
     let ativos = conferidos.filter((d) => d.emPromocao);
     const encerrados = conferidos.length - ativos.length;
     // rodízio: quem completou 24 h no ar dá lugar a uma promoção nova (igual para todos os destaques)
+    // e, se faltar destaque, completa sozinho com os melhores da métrica (iguais aos outros)
     try {
-      ativos = (await aplicarRodizio(ativos)).lista;
+      ativos = await vitrineComoAparece(ativos);
     } catch (erro) {
       console.warn('Rodízio indisponível agora', erro);
     }
@@ -351,21 +352,23 @@ function atualizarCartoesNoLugar(trilho, html) {
 
 async function semDestaquesNoBanner() {
   try {
-    renderizarBillboard((await buscarPromocoes({ ordem: 'Deal Rating', limite: 5 })).filter((p) => p.imagem));
+    renderizarBillboard(agruparPorJogo(await destaquesAutomaticos(5, { excluir: estado.destaques || [] })));
   } catch (erro) {
     console.error(erro);
   }
 }
 
-// Sem destaques (ou todos encerrados): esconde a faixa e o banner mostra as melhores promoções do momento
+// Sem destaques no Firestore: a vitrine se completa sozinha com os melhores da métrica do rodízio,
+// do mesmo jeito que os destaques escolhidos (banner e faixa)
 async function semDestaques() {
-  $('#faixa-destaques').hidden = true;
-  assinaturaDestaques = '';
-  chaveFaixa = '';
   try {
-    renderizarBillboard((await buscarPromocoes({ ordem: 'Deal Rating', limite: 5 })).filter((p) => p.imagem));
+    const automaticos = await destaquesAutomaticos(5);
+    if (!automaticos.length) throw new Error('sem promoções para completar');
+    guardarDestaques(automaticos);
+    desenharDestaques(automaticos);
   } catch (erro) {
     console.error(erro);
+    $('#faixa-destaques').hidden = true;
   }
 }
 

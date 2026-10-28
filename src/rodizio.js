@@ -76,11 +76,52 @@ export async function aplicarRodizio(destaques) {
       exibir: d.exibir,
       ordem: d.ordem,
       noArMs: Date.now(),
+      automatico: true,
     };
     trocas.push({ saiu: d, entrou });
     return entrou;
   });
   return { lista, trocas };
+}
+
+// Quando não há destaques suficientes, a vitrine se completa sozinha com os melhores da métrica.
+// Esses itens aparecem iguais aos outros (na vitrine e na janela do Destacar) e só são gravados
+// no Firestore quando o admin mexe na lista pela janela do Destacar.
+export async function destaquesAutomaticos(quantidade = 5, { excluir = [], exibir = 'ambos' } = {}) {
+  const config = await lerConfigRodizio();
+  const opcoes = await candidatos(config.metrica || METRICA_PADRAO);
+  const base = Math.max(0, ...excluir.map((d) => d.ordem ?? 0)) + 1;
+  return escolher(opcoes, quantidade, { destaques: excluir, recentes: [] }).map((p, i) => ({
+    ...p,
+    id: p.dealID.replaceAll('/', '_'),
+    comentario: '',
+    video: '',
+    fixo: false,
+    ativo: true,
+    exibir,
+    ordem: base + i,
+    noArMs: Date.now(),
+    automatico: true, // só para saber que ainda não está gravado (não muda nada na tela)
+  }));
+}
+
+// A lista exatamente como aparece na vitrine: ativos em promoção + rodízio de 24 h + completados sozinhos
+export async function vitrineComoAparece(ativos) {
+  let { lista } = await aplicarRodizio(ativos);
+  if (!lista.length) return destaquesAutomaticos(5);
+  if (!lista.some((d) => d.exibir !== 'faixa')) {
+    // ninguém no banner: o banner se completa sozinho
+    lista = [...lista, ...(await destaquesAutomaticos(5, { excluir: lista, exibir: 'banner' }))];
+  }
+  return lista;
+}
+
+// Grava os destaques que estavam só na tela (completados sozinhos ou trocados pelo rodízio),
+// para a vitrine continuar igual depois de uma mudança feita pelo admin
+export async function gravarAutomaticos(lista, { exceto = '' } = {}) {
+  for (const d of lista.filter((x) => x.automatico && x.id !== exceto)) {
+    await destacar(d, { exibir: d.exibir, ordem: d.ordem });
+  }
 }
 
 // "Adicionar automaticamente" (painel): os N melhores pela métrica entram no topo da lista.

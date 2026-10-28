@@ -15,7 +15,7 @@ import {
   definirFixoDestaque,
 } from './destaques.js';
 import { abrirDestacar } from './admin-destacar.js';
-import { executarRodizio, tempoRestante, adicionarAutomaticamente, METRICAS, METRICA_PADRAO } from './rodizio.js';
+import { executarRodizio, aplicarRodizio, tempoRestante, adicionarAutomaticamente, METRICAS, METRICA_PADRAO } from './rodizio.js';
 import { lerConfigRodizio } from './destaques.js';
 import { ATALHOS } from './atalhos-busca.js';
 import { videoValido } from './trailer.js';
@@ -158,6 +158,33 @@ async function buscarChegando({ mais = false } = {}) {
   } finally {
     botaoMais.disabled = false;
   }
+}
+
+// O que a vitrine está mostrando agora, incluindo os destaques automáticos:
+// - os que o rodízio de 24 h já colocou no lugar dos vencidos (mesmo antes de gravar);
+// - sem destaque para o banner, as promoções "Em alta" que ele mostra sozinho.
+async function destaquesComoNaVitrine() {
+  const ativos = naVitrine.filter((d) => d.ativo && d.emPromocao !== false);
+  const pausados = naVitrine.filter((d) => !d.ativo);
+  let lista = ativos;
+  try {
+    const { lista: girada, trocas } = await aplicarRodizio(ativos);
+    lista = girada.map((d) => {
+      const troca = trocas.find((t) => t.entrou === d);
+      return troca ? { ...d, substitui: troca.saiu } : d;
+    });
+  } catch (erro) {
+    console.warn(erro);
+  }
+  if (!lista.some((d) => d.exibir !== 'faixa')) {
+    try {
+      const emAlta = (await buscarPromocoes({ ordem: 'Deal Rating', limite: 5 })).filter((p) => p.imagem);
+      lista = [...lista, ...emAlta.map((p) => ({ ...p, id: `alta-${p.dealID}`, emAlta: true, ativo: true }))];
+    } catch (erro) {
+      console.warn(erro);
+    }
+  }
+  return [...lista, ...pausados];
 }
 
 // ---------- Na vitrine ----------
@@ -350,7 +377,10 @@ export async function iniciarAveriguar() {
     if (!botao) return;
     const promo = chegando.find((p) => p.dealID === botao.dataset.aprovar);
     botao.disabled = true;
-    const destacou = await abrirDestacar(promo, naVitrine);
+    const texto = botao.textContent;
+    botao.textContent = 'Abrindo…';
+    const destacou = await abrirDestacar(promo, await destaquesComoNaVitrine());
+    botao.textContent = texto;
     if (destacou) {
       await carregarVitrineAdmin();
       renderizarChegando();

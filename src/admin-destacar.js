@@ -18,7 +18,15 @@ function horas(ms) {
 
 function cartaoAtual(d) {
   const restante = tempoRestante(d);
-  const situacao = !d.ativo ? 'Pausado' : d.fixo ? '📌 Fixo' : restante ? `sai em ${horas(restante)}` : 'troca no próximo rodízio';
+  const situacao = d.emAlta
+    ? 'no banner enquanto não houver destaque'
+    : !d.ativo
+      ? 'Pausado'
+      : d.fixo
+        ? '📌 Fixo'
+        : restante
+          ? `sai em ${horas(restante)}`
+          : 'troca no próximo rodízio';
   return `
     <button type="button" class="opcao-substituir" data-substituir="${esc(d.id)}" aria-pressed="false">
       <span class="opcao-capa jogo-capa">${imgJogo(d)}</span>
@@ -150,10 +158,13 @@ export function abrirDestacar(promo, atuais) {
           video,
           fixo: form.elements.fixo.checked,
           // substituindo: entra no lugar do outro; adicionando: no começo da lista
-          ordem: alvo ? alvo.ordem ?? -Date.now() / 1e6 : -Date.now() / 1e6,
-          exibir: alvo?.exibir || 'ambos',
+          ordem: alvo && !alvo.emAlta ? alvo.ordem ?? -Date.now() / 1e6 : -Date.now() / 1e6,
+          exibir: alvo && !alvo.emAlta ? alvo.exibir || 'ambos' : 'ambos',
         });
-        if (alvo) await removerDestaque(alvo.id);
+        // destaque automático do rodízio (ainda não gravado): sai o que ele substituiu
+        // "Em alta" (banner sem destaques): não há o que remover, ele some quando entra um destaque
+        if (alvo?.substitui) await removerDestaque(alvo.substitui.id);
+        else if (alvo && !alvo.emAlta) await removerDestaque(alvo.id);
         fechar(true);
       } catch (falha) {
         console.error(falha);
