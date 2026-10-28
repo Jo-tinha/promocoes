@@ -18,7 +18,8 @@ import { abrirDestacar, abrirTrocarImagens } from './admin-destacar.js';
 import { executarRodizio, aplicarRodizio, destaquesAutomaticos, tempoRestante, adicionarAutomaticamente, METRICAS, METRICA_PADRAO } from './rodizio.js';
 import { lerConfigRodizio } from './destaques.js';
 import { ATALHOS } from './atalhos-busca.js';
-import { videoValido } from './trailer.js';
+import { SEM_VIDEO } from './trailer.js';
+import { abrirEditorVideo } from './admin-video.js';
 import { editarManual } from './admin-adicionar.js';
 import { contexto, carregarContexto, precoEmReal, nomeDaLoja } from './contexto.js';
 import { esc, IMAGEM_PADRAO, formatarReal } from './util.js';
@@ -244,7 +245,7 @@ function linhaVitrine(p, posicao, total) {
                  <button class="botao secundario pequeno" type="button" data-comentar="${esc(p.id)}">Comentário</button>
                  <button class="botao secundario pequeno" type="button" data-atualizar="${esc(p.id)}">${mudou ? 'Salvar preço novo' : 'Atualizar preço'}</button>`
           }
-          <button class="botao secundario pequeno" type="button" data-video="${esc(p.id)}" title="${p.video ? esc(p.video) : 'Sem link: usa o trailer da Steam'}">${p.video ? '🎬 Vídeo ✓' : '🎬 Vídeo'}</button>
+          <button class="botao secundario pequeno" type="button" data-video="${esc(p.id)}" title="${p.video ? esc(p.video) : 'Sem link: usa o trailer da Steam'}">${p.video === SEM_VIDEO ? '🚫 Sem vídeo' : p.video ? '🎬 Vídeo ✓' : '🎬 Vídeo'}</button>
           <button class="botao secundario pequeno" type="button" data-fixar="${esc(p.id)}" aria-pressed="${Boolean(p.fixo)}">${p.fixo ? '📌 Fixo' : 'Fixar'}</button>
           <button class="botao secundario pequeno" type="button" data-pausar="${esc(p.id)}">${p.ativo ? 'Pausar' : 'Ativar'}</button>
           <button class="botao perigo pequeno" type="button" data-remover="${esc(p.id)}">Remover</button>
@@ -436,12 +437,8 @@ export async function iniciarAveriguar() {
     const botaoVideo = e.target.closest('[data-video]');
     if (botaoVideo) {
       const p = naVitrine.find((x) => x.id === botaoVideo.dataset.video);
-      const novo = prompt(
-        `Vídeo de "${p.titulo}" (toca sem som quando passam o mouse).\nLink do YouTube, .mp4 ou .webm. Deixe vazio para usar o trailer da Steam.`,
-        p.video || '',
-      );
+      const novo = await abrirEditorVideo(p);
       if (novo === null) return;
-      if (novo.trim() && !videoValido(novo)) return alert('Use um link do YouTube ou de um arquivo .mp4/.webm.');
       try {
         await definirVideoDestaque(p.id, novo);
         p.video = novo.trim();

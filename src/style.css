@@ -1280,3 +1280,32 @@ iframe.trailer { height: auto; aspect-ratio: 16 / 9; min-height: 100%; top: 50%;
 
 /* "≈" = preço convertido do dólar (as ofertas da Steam usam o preço oficial em reais) */
 .aprox { font-size: 0.75em; font-weight: 600; color: var(--texto-suave); margin-right: 3px; cursor: help; }
+
+/* Escolha do vídeo (painel) */
+.campo-video { display: grid; gap: 12px; }
+.opcoes-video { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.opcao-video {
+  display: grid; gap: 2px; justify-items: start; text-align: left; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  background: var(--cartao); border: 2px solid var(--linha); color: var(--texto); font: inherit; transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.opcao-video:hover:not(:disabled) { border-color: var(--texto-suave); transform: translateY(-1px); }
+.opcao-video[aria-checked='true'] { border-color: var(--destaque); background: color-mix(in srgb, var(--destaque) 10%, var(--cartao)); }
+.opcao-video:disabled { opacity: 0.45; cursor: not-allowed; }
+.opcao-video-icone { font-size: 1.2rem; }
+.opcao-video strong { font-size: 0.86rem; }
+.opcao-video small { font-size: 0.72rem; color: var(--texto-suave); }
+.video-link { display: grid; gap: 5px; font-size: 0.85rem; font-weight: 600; }
+.video-link input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--linha); background: var(--fundo); color: var(--texto); font: inherit; font-weight: 400; }
+.video-link small { font-weight: 400; color: var(--texto-suave); }
+.video-previa-area { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
+.video-previa { border-radius: 10px; border: 1px solid var(--linha); }
+.video-previa::after { display: none; }
+.video-previa .trailer { opacity: 0; }
+.video-previa .trailer.tocando { opacity: 1; }
+.video-previa-vazia { position: absolute; inset: 0; display: grid; place-items: center; color: var(--texto-suave); font-size: 0.85rem; }
+.video-previa-texto p { margin: 4px 0 0; }
+.dialogo-video { width: min(820px, calc(100vw - 24px)); }
+@media (max-width: 640px) {
+  .opcoes-video { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .video-previa-area { grid-template-columns: 1fr; }
+}

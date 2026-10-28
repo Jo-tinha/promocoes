@@ -26,7 +26,10 @@ export function idYoutube(url = '') {
   return m ? m[1] : null;
 }
 
+export const SEM_VIDEO = 'nenhum'; // o admin escolheu não ter vídeo nesse destaque
+
 export function videoValido(url = '') {
+  if (url === SEM_VIDEO) return true;
   return Boolean(idYoutube(url)) || /^https?:\/\/\S+\.(mp4|webm|m4v|mov)(\?\S*)?$/i.test(String(url).trim());
 }
 
@@ -45,6 +48,7 @@ async function fontesSteam(app) {
 
 // Descobre o vídeo: { youtube } ou { fontes: [{ url, tipo }] } ou null
 export async function videoDoJogo({ video = '', steam = '' } = {}) {
+  if (video === SEM_VIDEO) return null;
   const yt = idYoutube(video);
   if (yt) return { youtube: yt };
   if (video) return { fontes: [{ url: video, tipo: /\.webm/i.test(video) ? 'video/webm' : 'video/mp4' }] };
@@ -96,7 +100,7 @@ async function tocarHls(v, url, palco) {
   hls.attachMedia(v);
 }
 
-function elementoDoVideo(info, palco) {
+export function elementoDoVideo(info, palco) {
   if (info.youtube) {
     const id = info.youtube;
     const f = document.createElement('iframe');

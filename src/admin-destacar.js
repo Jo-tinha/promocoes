@@ -4,7 +4,7 @@ import { destacar, removerDestaque, definirImagensDestaque } from './destaques.j
 import { campoImagem, ativarCamposImagem, imagemComErro } from './imagem-ideal.js';
 import { precoEmReal, nomeDaLoja } from './contexto.js';
 import { imgJogo, idSteam, fontesAutomaticas } from './lojas.js';
-import { videoDoJogo, videoValido, idYoutube } from './trailer.js';
+import { campoVideo, ativarCampoVideo, videoComErro, pararPrevias } from './admin-video.js';
 import { tempoRestante, gravarAutomaticos } from './rodizio.js';
 import { esc, formatarReal } from './util.js';
 import { nomeNormalizado } from './cartoes.js';
@@ -91,10 +91,9 @@ export function abrirDestacar(promo, atuais) {
           <div class="campo-editor"><strong>Comentário</strong> <small>(opcional, aparece no cartão e no banner)</small>
             ${editorComentario({ nome: 'comentario' })}
           </div>
-          <label>Vídeo <small>(opcional — YouTube, .mp4 ou .webm; toca quando passam o mouse)</small>
-            <input name="video" type="url" placeholder="${idSteam(promo) ? 'Vazio = trailer da Steam automático' : 'https://www.youtube.com/watch?v=…'}" />
-          </label>
-          <p class="secao-nota" id="situacao-video">${idSteam(promo) ? 'Procurando o trailer da Steam…' : 'Este jogo não tem página na Steam: sem trailer automático.'}</p>
+          <div class="campo-editor"><strong>Vídeo</strong> <small>(toca sem som quando passam o mouse)</small>
+            ${campoVideo({ nome: 'video', jogo: promo })}
+          </div>
           <label class="check-filtro"><input type="checkbox" name="fixo" /> 📌 Fixo — não sai no rodízio de 24 horas</label>
         </section>
 
@@ -107,13 +106,13 @@ export function abrirDestacar(promo, atuais) {
     document.body.append(dialogo);
     const form = dialogo.querySelector('form');
     const confirmar = dialogo.querySelector('#confirmar-destacar');
-    const campoVideo = form.elements.video;
-    const situacaoVideo = dialogo.querySelector('#situacao-video');
+    ativarCampoVideo(dialogo);
     ativarCamposImagem(dialogo);
     ativarEditores(dialogo);
     let substituir = '';
 
     const fechar = (resultado) => {
+      pararPrevias(dialogo);
       dialogo.close();
       dialogo.remove();
       resolver(resultado);
@@ -132,34 +131,17 @@ export function abrirDestacar(promo, atuais) {
       confirmar.textContent = alvo ? `★ Substituir “${alvo.titulo.length > 28 ? `${alvo.titulo.slice(0, 26)}…` : alvo.titulo}”` : '★ Destacar';
     });
 
-    // mostra se há trailer automático da Steam
-    if (idSteam(promo)) {
-      videoDoJogo({ steam: idSteam(promo) }).then((info) => {
-        if (campoVideo.value.trim()) return;
-        situacaoVideo.textContent = info
-          ? '✓ Trailer da Steam encontrado: toca sozinho quando passarem o mouse. Cole um link só se quiser outro vídeo.'
-          : 'Não achei trailer na Steam para este jogo (ou o site está rodando sem o Vercel). Cole um link se quiser.';
-      });
-    }
-    campoVideo.addEventListener('input', () => {
-      const v = campoVideo.value.trim();
-      if (!v) return;
-      situacaoVideo.textContent = videoValido(v)
-        ? `✓ ${idYoutube(v) ? 'Vídeo do YouTube' : 'Arquivo de vídeo'} — toca sem som, em loop, ao passar o mouse.`
-        : 'Use um link do YouTube ou de um arquivo .mp4/.webm.';
-    });
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const erro = dialogo.querySelector('#erro-destacar');
-      const video = campoVideo.value.trim();
+      const video = form.elements.video.value.trim();
       if (imagemComErro(dialogo)) {
         erro.textContent = 'Uma das imagens não abre. Corrija o link ou deixe o campo vazio para usar a automática.';
         erro.hidden = false;
         return;
       }
-      if (video && !videoValido(video)) {
-        erro.textContent = 'O vídeo precisa ser um link do YouTube ou de um arquivo .mp4/.webm.';
+      if (videoComErro(dialogo)) {
+        erro.textContent = 'O link do vídeo não é válido. Corrija ou escolha outra opção de vídeo.';
         erro.hidden = false;
         return;
       }
