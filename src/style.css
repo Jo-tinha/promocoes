@@ -1178,6 +1178,5 @@ iframe.trailer { height: auto; aspect-ratio: 16 / 9; min-height: 100%; top: 50%;
   .chips-notificar .chip { flex: 0 0 auto; }
   .cartao-notificar-preco { flex-wrap: wrap; gap: 0 6px; }
   .cartao-notificar-preco strong { font-size: 0.98rem; }
-  .selo-seguindo { font-size: 0; padding: 4px 6px; }
-  .selo-seguindo::first-letter { font-size: 0.8rem; }
+  .selo-seguindo { font-size: 0.64rem; padding: 2px 7px; }
 }
