@@ -8,7 +8,7 @@ import { abrirEscolha } from './escolher-loja.js';
 import { salvarNoCatalogo } from './catalogo.js';
 import { buscarPromocoes, buscarGratis, buscarMaisRelevantes } from './api.js';
 import { contexto, carregarContexto, nomeDaLoja, precoEmReal } from './contexto.js';
-import { ORDEM_LOJAS, varsDaLoja, imgJogo, chaveDaImagem, idSteam } from './lojas.js';
+import { ORDEM_LOJAS, varsDaLoja, imgJogo, chaveDaImagem, idSteam, registrarImagensDoAdmin } from './lojas.js';
 import { pararTrailer } from './trailer.js';
 import { vitrineComoAparece, destaquesAutomaticos } from './rodizio.js';
 import { formatarReal, esc, hojeISO, IMAGEM_PADRAO } from './util.js';
@@ -299,6 +299,7 @@ function carregarDestaques(contextoPronto) {
       primeiraLista = false;
       await contextoPronto; // preços em reais precisam da cotação
       destaquesDoBanco = lista.filter((d) => d.ativo); // pausados no painel não aparecem
+      registrarImagensDoAdmin(destaquesDoBanco);
       if (!destaquesDoBanco.length) {
         guardarDestaques([]);
         return semDestaques();
@@ -322,7 +323,10 @@ let assinaturaDestaques = '';
 let chaveFaixa = '';
 function desenharDestaques(lista) {
   // assinatura: quais destaques, em que ordem e com que preço; se nada mudou, não mexe na tela
-  const assinatura = lista.map((d) => `${d.dealID}:${d.precoPromocional}:${d.exibir}:${d.comentario || ''}`).join('|');
+  // (inclui imagens e vídeo: quando o admin troca a imagem, a vitrine de quem está com ela aberta atualiza)
+  const assinatura = lista
+    .map((d) => [d.dealID, d.precoPromocional, d.exibir, d.comentario || '', d.imagemCartao || '', d.imagemBanner || '', d.video || ''].join(':'))
+    .join('|');
   if (assinatura === assinaturaDestaques) return;
   assinaturaDestaques = assinatura;
 
@@ -364,6 +368,11 @@ function atualizarCartoesNoLugar(trilho, html) {
   for (const novo of t.content.querySelectorAll('.jogo')) {
     const atual = trilho.querySelector(`.jogo[data-deal="${CSS.escape(novo.dataset.deal)}"]`);
     if (!atual) continue;
+    // imagem ou vídeo trocados pelo admin: troca o cartão inteiro (com fade da imagem nova)
+    if (atual.dataset.capa !== novo.dataset.capa || atual.dataset.video !== novo.dataset.video) {
+      atual.replaceWith(novo);
+      continue;
+    }
     const corpoNovo = novo.querySelector('.jogo-corpo');
     const corpo = atual.querySelector('.jogo-corpo');
     if (corpo && corpoNovo && corpo.innerHTML !== corpoNovo.innerHTML) corpo.innerHTML = corpoNovo.innerHTML;

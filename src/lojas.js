@@ -84,7 +84,22 @@ export function idSteam(p) {
   return m ? m[1] : null;
 }
 
+// Imagens que o admin escolheu nos destaques, por jogo: valem também quando o mesmo jogo
+// aparece em outras listas (faixas das lojas, grátis etc.)
+const imagensDoAdmin = new Map(); // gameID → { imagemCartao, imagemBanner }
+export function registrarImagensDoAdmin(destaques) {
+  imagensDoAdmin.clear();
+  for (const d of destaques) {
+    if (!d.manual && d.gameID && (d.imagemCartao || d.imagemBanner)) {
+      imagensDoAdmin.set(String(d.gameID), { imagemCartao: d.imagemCartao || '', imagemBanner: d.imagemBanner || '' });
+    }
+  }
+}
+
 function fontesDaImagem(p, tipo) {
+  if (!p.manual && !p.imagemCartao && !p.imagemBanner && p.gameID && imagensDoAdmin.has(String(p.gameID))) {
+    p = { ...p, ...imagensDoAdmin.get(String(p.gameID)) };
+  }
   if (p.manual) {
     const fontes = tipo === 'banner' ? [p.imagemBanner, p.imagem] : [p.imagem, p.imagemBanner];
     return [...new Set([...fontes.filter(Boolean), PIXEL_VAZIO])];

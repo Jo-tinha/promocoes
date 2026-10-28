@@ -1,6 +1,6 @@
 // Peças visuais compartilhadas: cartão de jogo, pílula da loja, metadados, preços e esqueletos
 import { contexto, precoEmReal } from './contexto.js';
-import { varsDaLoja, lojaPelaPlataforma, imgJogo, idSteam } from './lojas.js';
+import { varsDaLoja, lojaPelaPlataforma, imgJogo, idSteam, chaveDaImagem } from './lojas.js';
 import { botaoEstrela } from './estrela.js';
 import { esc, formatarReal } from './util.js';
 import { renderizarComentario } from './texto-rico.js';
@@ -60,7 +60,7 @@ export function cartaoJogo(p, { especial = false, i = 0 } = {}) {
   const lojaId = p.lojaId || lojaPelaPlataforma(p.plataformas);
   const gratis = p.precoPromocional === 0;
   return `
-    <article class="jogo" data-deal="${esc(p.dealID)}" ${atributosTrailer(p)} style="${varsDaLoja(lojaId)};--i:${Math.min(i, 20)}">
+    <article class="jogo" data-deal="${esc(p.dealID)}" data-capa="${esc(chaveDaImagem(p))}" ${atributosTrailer(p)} style="${varsDaLoja(lojaId)};--i:${Math.min(i, 20)}">
       <a class="jogo-capa" href="${esc(p.link)}" target="_blank" rel="noopener sponsored" tabindex="-1">
         ${imgJogo(p)}
         ${especial ? pilulaLoja(lojaId, p.lojaNome || p.plataformas) : ''}
@@ -167,7 +167,7 @@ function logosDasLojas(ofertas) {
 
 export function cartaoAgrupado(g, { i = 0 } = {}) {
   return `
-    <article class="jogo jogo-agrupado" data-deal="${esc(g.dealID)}" ${atributosTrailer({ ...g, video: g.video || g.ofertas.map((o) => o.video).find(Boolean) })} data-escolher="${esc(g.dealID)}" style="--i:${Math.min(i, 20)}">
+    <article class="jogo jogo-agrupado" data-deal="${esc(g.dealID)}" data-capa="${esc(chaveDaImagem(g))}" ${atributosTrailer({ ...g, video: g.video || g.ofertas.map((o) => o.video).find(Boolean) })} data-escolher="${esc(g.dealID)}" style="--i:${Math.min(i, 20)}">
       <button class="jogo-capa" type="button" data-escolher="${esc(g.dealID)}" tabindex="-1" aria-hidden="true">
         ${imgJogo(g)}
         ${logosDasLojas(g.ofertas)}
