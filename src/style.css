@@ -1004,17 +1004,17 @@ td.ordem .botao { padding: 4px 8px; }
 /* banner: duas camadas de fundo que trocam com crossfade; o texto fica por cima */
 .billboard-texto { position: relative; width: 100%; }
 .billboard-fundo { overflow: hidden; }
-/* troca de destaque: o novo entra pela esquerda e empurra o anterior para a direita, devagar */
+/* troca de destaque: o novo entra pela direita e empurra o anterior para a esquerda, devagar */
 .billboard-fundo .camada {
-  position: absolute; inset: 0; opacity: 0; transform: translateX(-100%);
+  position: absolute; inset: 0; opacity: 0; transform: translateX(100%);
   transition: transform 1.6s cubic-bezier(0.65, 0, 0.35, 1);
 }
 .billboard-fundo .camada.ativa { opacity: 1; transform: none; }
-.billboard-fundo .camada.saindo { opacity: 1; transform: translateX(100%); }
+.billboard-fundo .camada.saindo { opacity: 1; transform: translateX(-100%); }
 .billboard-fundo .camada.sem-transicao { transition: none; }
 .billboard-fundo .camada img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
 .billboard-texto .billboard-conteudo { animation: deslizar-texto 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both; }
-@keyframes deslizar-texto { from { opacity: 0; transform: translateX(-70px); } to { opacity: 1; transform: none; } }
+@keyframes deslizar-texto { from { opacity: 0; transform: translateX(70px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
   .billboard-fundo .camada, .billboard-fundo .camada.saindo { transform: none; transition: opacity 0.6s ease; }
   .billboard-fundo .camada.saindo { opacity: 0; }

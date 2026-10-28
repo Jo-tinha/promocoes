@@ -98,18 +98,23 @@ function trocarFundoDoBanner(p) {
   proxima.innerHTML = html;
   const img = proxima.querySelector('img');
   let feito = false;
-  // o novo entra pela esquerda e empurra o anterior para a direita, devagar
+  // o novo entra pela direita e empurra o anterior para a esquerda, devagar
   const mostrar = () => {
     if (feito) return;
     feito = true;
     const tinhaOutro = visivel.classList.contains('ativa');
-    proxima.classList.remove('saindo', 'sem-transicao');
+    // garante que o novo parte da direita (mesmo se ainda estava saindo numa troca rápida)
+    clearTimeout(proxima._volta);
+    proxima.classList.add('sem-transicao');
+    proxima.classList.remove('saindo');
+    void proxima.offsetWidth;
+    proxima.classList.remove('sem-transicao');
     proxima.classList.add('ativa');
     if (!tinhaOutro) return;
     visivel.classList.remove('ativa');
     visivel.classList.add('saindo');
     clearTimeout(visivel._volta);
-    // depois que saiu pela direita, volta escondido para a esquerda (sem animar), pronto para o próximo
+    // depois que saiu pela esquerda, volta escondido para a direita (sem animar), pronto para o próximo
     visivel._volta = setTimeout(() => {
       visivel.classList.add('sem-transicao');
       visivel.classList.remove('saindo');
