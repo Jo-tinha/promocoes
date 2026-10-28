@@ -30,21 +30,65 @@
         <div class="lista-linhas" id="lista-avisos"></div>
       </section>
 
+      <section class="caixa" id="sec-acompanhando" aria-labelledby="titulo-acompanhando">
+        <div class="secao-cabeca">
+          <div>
+            <h2 id="titulo-acompanhando">Jogos que você acompanha <span class="contador" id="qtd-acompanhando">0</span></h2>
+            <p class="secao-nota">Defina até quanto quer pagar para ser avisado só quando chegar no seu preço.</p>
+          </div>
+          <button class="botao perigo pequeno" type="button" id="remover-todas" hidden>🔕 Remover todas</button>
+        </div>
+        <div class="acompanhando-lista" id="lista-acompanhando"></div>
+      </section>
+
       <section class="caixa" aria-labelledby="titulo-jogos">
         <div class="secao-cabeca">
           <div>
             <h2 id="titulo-jogos">Escolha seus jogos</h2>
-            <p class="secao-nota" id="nota-jogos">Jogos em oferta agora e que já estiveram em destaque. Busque pelo nome e marque os que você quer acompanhar.</p>
+            <p class="secao-nota" id="nota-jogos">Jogos em oferta agora e que já passaram pelo Buba Promo.</p>
           </div>
         </div>
-        <div class="filtros">
-          <input type="search" id="busca-jogos" placeholder="Buscar jogo" aria-label="Buscar jogo" />
-          <select id="filtro-jogos" aria-label="Mostrar">
-            <option value="todos">Todos os jogos</option>
-            <option value="seguindo">Só os que acompanho</option>
-          </select>
+
+        <div class="busca-notificar">
+          <div class="busca-notificar-campo">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M10 2a8 8 0 0 1 6.32 12.9l5.39 5.4-1.41 1.4-5.4-5.39A8 8 0 1 1 10 2Zm0 2a6 6 0 1 0 0 12 6 6 0 0 0 0-12Z"/></svg>
+            <input type="search" id="busca-jogos" placeholder="Buscar jogo pelo nome" title="Enter procura também em todas as lojas" aria-label="Buscar jogo" autocomplete="off" enterkeyhint="search" />
+            <span class="busca-carregando" id="carregando-jogos" hidden aria-hidden="true"></span>
+          </div>
+          <div class="chips-notificar" id="chips-notificar" role="group" aria-label="Mostrar">
+            <button type="button" class="chip" data-mostrar="todos" aria-pressed="true">Todos</button>
+            <button type="button" class="chip" data-mostrar="oferta" aria-pressed="false">🔥 Em oferta agora</button>
+            <button type="button" class="chip" data-mostrar="seguindo" aria-pressed="false">🔔 Acompanhando</button>
+            <button type="button" class="chip" data-mostrar="nao" aria-pressed="false">Ainda não acompanho</button>
+          </div>
+          <form class="filtros-busca filtros-notificar" id="filtros-jogos">
+            <label>Loja <select name="loja"><option value="">Todas</option></select></label>
+            <label>Desconto
+              <select name="desc">
+                <option value="">Qualquer</option>
+                <option value="25">25% ou mais</option>
+                <option value="50">50% ou mais</option>
+                <option value="75">75% ou mais</option>
+              </select>
+            </label>
+            <label>Preço até (R$) <input name="max" type="number" min="1" step="1" inputmode="numeric" placeholder="qualquer" /></label>
+            <label>Ordenar
+              <select name="ordem">
+                <option value="relevancia">Mais relevantes</option>
+                <option value="az">A–Z</option>
+                <option value="za">Z–A</option>
+                <option value="desconto">Maior desconto</option>
+                <option value="preco">Menor preço</option>
+                <option value="recente">Oferta mais recente</option>
+              </select>
+            </label>
+            <button class="botao secundario pequeno" type="button" id="limpar-filtros-jogos" hidden>Limpar filtros</button>
+          </form>
+          <p class="secao-nota" id="resumo-jogos" role="status"></p>
         </div>
-        <div class="jogos-grade" id="lista-jogos"></div>
+
+        <div class="grade-notificar" id="lista-jogos"></div>
+        <div class="mais-lojas"><button class="botao secundario" type="button" id="mais-jogos" hidden>Mostrar mais</button></div>
       </section>
     </main>
 
