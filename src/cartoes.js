@@ -25,12 +25,29 @@ export function metas(p) {
 // destaques manuais guardam o preço em reais; os da API, em dólar
 const valor = (p, v) => (p.moeda === 'BRL' ? formatarReal(v) : precoEmReal(v));
 
+// "≈" nos preços que são conversão do dólar (a Steam tem preço oficial em reais; as outras lojas
+// a CheapShark só informa em dólar, e a loja brasileira pode cobrar diferente)
+export const marcaConversao = (p) =>
+  p.moeda === 'BRL' || p.precoBR || p.precoPromocional === 0
+    ? ''
+    : '<span class="aprox" title="Convertido do dólar pela cotação de hoje — o preço na loja pode ser um pouco diferente">≈</span>';
+
 export function precos(p) {
   if (p.precoPromocional === null || p.precoPromocional === undefined) return ''; // banner sem preço (evento, anúncio)
   const gratis = p.precoPromocional === 0;
   return `<div class="precos">
     ${p.precoNormal > p.precoPromocional ? `<span class="preco-antigo">${valor(p, p.precoNormal)}</span>` : ''}
-    <span class="preco-final">${gratis ? 'Grátis' : valor(p, p.precoPromocional)}</span>
+    <span class="preco-final">${gratis ? 'Grátis' : `${marcaConversao(p)}${valor(p, p.precoPromocional)}`}</span>
+  </div>`;
+}
+
+// Jogo em várias lojas: o número grande é o MENOR preço (a média fica menor, só como referência)
+export function precosAgrupados(g) {
+  const maisBarata = g.ofertas.reduce((a, b) => (b.precoPromocional < a.precoPromocional ? b : a), g.ofertas[0]);
+  return `<div class="precos">
+    <span class="preco-legenda">a partir de</span>
+    <span class="preco-final">${g.menorPreco === 0 ? 'Grátis' : `${marcaConversao(maisBarata)}${precoEmReal(g.menorPreco)}`}</span>
+    <span class="preco-de">média entre as lojas ${precoEmReal(g.precoMedio)}</span>
   </div>`;
 }
 
@@ -160,11 +177,7 @@ export function cartaoAgrupado(g, { i = 0 } = {}) {
         <h3 title="${esc(g.titulo)}">${esc(g.titulo)}</h3>
         ${g.comentario ? `<div class="comentario-dedo comentario-rico">${renderizarComentario(g.comentario)}</div>` : ''}
         ${metas(g)}
-        <div class="precos">
-          <span class="preco-legenda">média</span>
-          <span class="preco-final">${precoEmReal(g.precoMedio)}</span>
-          <span class="preco-de">a partir de ${precoEmReal(g.menorPreco)}</span>
-        </div>
+        ${precosAgrupados(g)}
         <div class="jogo-rodape">
           <button class="link-escolher" type="button" data-escolher="${esc(g.dealID)}">Escolher loja (${g.ofertas.length}) →</button>
           ${botaoEstrela(g)}

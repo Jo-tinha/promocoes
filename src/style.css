@@ -1277,3 +1277,6 @@ iframe.trailer { height: auto; aspect-ratio: 16 / 9; min-height: 100%; top: 50%;
 .editor-vazio { color: var(--texto-suave); font-style: italic; }
 .dialogo-comentario { width: min(760px, calc(100vw - 24px)); }
 @media (max-width: 640px) { .editor-previas { grid-template-columns: 1fr; } .editor-rodape small:first-child { display: none; } }
+
+/* "≈" = preço convertido do dólar (as ofertas da Steam usam o preço oficial em reais) */
+.aprox { font-size: 0.75em; font-weight: 600; color: var(--texto-suave); margin-right: 3px; cursor: help; }

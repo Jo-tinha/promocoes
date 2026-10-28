@@ -3,7 +3,7 @@ import { iniciarSessao } from './sessao.js';
 import { ouvirDestaques, conferirDestaquesAoVivo, comTodasAsLojas } from './destaques.js';
 import { listarRecomendacoes, TIPOS } from './recomendacoes.js';
 import { definirUsuario, carregarEstrelas, ativarEstrelas, botaoEstrela } from './estrela.js';
-import { cartaoJogo as cartaoBase, cartaoAgrupado, agruparPorJogo, pilulaLoja, metas, precos, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
+import { cartaoJogo as cartaoBase, cartaoAgrupado, agruparPorJogo, pilulaLoja, metas, precos, precosAgrupados, esqueletos, setas, ativarSetas, redesenharEstrelas } from './cartoes.js';
 import { abrirEscolha } from './escolher-loja.js';
 import { salvarNoCatalogo } from './catalogo.js';
 import { buscarPromocoes, buscarGratis } from './api.js';
@@ -175,7 +175,7 @@ function renderizarBillboard(novos) {
         ${metas(p)}
         ${
           p.agrupado
-            ? `<div class="precos"><span class="preco-legenda">média</span><span class="preco-final">${precoEmReal(p.precoMedio)}</span><span class="preco-de">a partir de ${precoEmReal(p.menorPreco)}</span></div>`
+            ? precosAgrupados(p)
             : precos(p)
         }
         <div class="billboard-acoes">

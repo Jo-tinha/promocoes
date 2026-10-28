@@ -91,6 +91,10 @@ Importe o repositório em <https://vercel.com/new>. O preset **Vite** é detecta
 - **Estrela ☆**: em qualquer cartão (vitrine, loja, Games). Estrelar grava em `usuarios/{uid}/seguindo` e, na primeira vez, o navegador pede permissão para notificações.
 - **Notificações**: com o site aberto em alguma aba, os jogos estrelados são conferidos ao abrir e a cada 15 minutos; promoções novas viram notificação do navegador (via `public/sw.js`, necessário no Android). Avisar com o navegador fechado exigiria um servidor de push (Firebase Cloud Messaging + back-end), fora do escopo.
 
+## Preços em reais
+
+A CheapShark informa os preços em dólar das lojas americanas. Para as ofertas da **Steam**, o site busca o **preço oficial da Steam Brasil em reais** (função `api/precos-steam.js`, que consulta a Steam com `cc=br`) — a Steam tem preço regional, quase sempre menor que "dólar × cotação". Nas outras lojas o valor é a conversão pela cotação do dia e aparece com **≈**. Em jogos com várias lojas, o número grande é o **menor preço**; a média entre as lojas aparece só como referência.
+
 ## Busca
 
 A barra fica no cabeçalho de todas as páginas: sugestões com capa e menor preço enquanto você digita (CheapShark `/games?title=`), trecho buscado em destaque, setas ↑ ↓ + Enter, Esc para fechar, botão de limpar, buscas recentes (só se o usuário permitir "Preferências" nos cookies) e atalho **/** para focar. No celular, a lupa abre a busca em tela cheia. Enter leva para `/busca.html?q=…`, com filtros de loja, preço máximo em R$, desconto mínimo, só grátis e ordenação — todos guardados no endereço, para o link poder ser compartilhado — e uma lista de jogos com o mesmo nome que não estão em promoção, para estrelar.

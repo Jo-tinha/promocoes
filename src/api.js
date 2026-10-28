@@ -77,7 +77,7 @@ export async function buscarPromocoes({
   if (lojaId) params.set('storeID', lojaId);
   if (precoMaximo !== null) params.set('upperPrice', String(precoMaximo));
   const lista = await getJson(`${CHEAPSHARK}/api/1.0/deals?${params}`);
-  return lista.map(converter);
+  return ajustarPrecosBR(lista.map(converter));
 }
 
 // Situação atual de uma promoção específica (usada para atualizar o preço de um destaque)
@@ -86,12 +86,16 @@ export async function buscarPromocaoPorId(dealID) {
   const info = dados.gameInfo;
   const normal = Number(info.retailPrice);
   const promocional = Number(info.salePrice);
-  return {
-    precoNormal: normal,
-    precoPromocional: promocional,
-    desconto: normal > 0 ? Math.round((1 - promocional / normal) * 100) : 0,
-    emPromocao: promocional < normal,
-  };
+  const [o] = await ajustarPrecosBR([
+    {
+      lojaId: info.storeID,
+      steamAppID: info.steamAppID,
+      precoNormal: normal,
+      precoPromocional: promocional,
+      desconto: normal > 0 ? Math.round((1 - promocional / normal) * 100) : 0,
+    },
+  ]);
+  return { ...o, emPromocao: promocional < normal };
 }
 
 // Promoções atuais de vários jogos (até 25 por consulta) — usada nos avisos do Notificar
@@ -120,7 +124,7 @@ export async function buscarOfertasDosJogos(gameIDs) {
       }
     }
   }
-  return resultado;
+  return ajustarPrecosBR(resultado);
 }
 
 // Todas as ofertas atuais de UM jogo, em todas as lojas, + o menor preço já registrado
@@ -134,12 +138,14 @@ export async function buscarOfertasDoJogo(gameID) {
       dealID,
       gameID,
       lojaId: d.storeID,
+      steamAppID: dados.info?.steamAppID || null,
       precoNormal: normal,
       precoPromocional: preco,
       desconto: Math.round(Number(d.savings)) || 0,
       link: linkDaPromocao(dealID, { lojaId: d.storeID, steamAppID: dados.info?.steamAppID }),
     };
   });
+  await ajustarPrecosBR(ofertas);
   return {
     titulo: dados.info?.title || '',
     imagem: dados.info?.thumb || '',
@@ -231,7 +237,58 @@ export async function buscarLojas() {
     .sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
-export async function buscarCotacaoDolar() {
-  const dados = await getJson('https://economia.awesomeapi.com.br/json/last/USD-BRL');
-  return { valor: Number(dados.USDBRL.bid), atualizadoEm: dados.USDBRL.create_date };
+let cotacaoPromessa;
+export function buscarCotacaoDolar() {
+  cotacaoPromessa ??= getJson('https://economia.awesomeapi.com.br/json/last/USD-BRL')
+    .then((dados) => ({ valor: Number(dados.USDBRL.bid), atualizadoEm: dados.USDBRL.create_date }))
+    .catch((erro) => {
+      cotacaoPromessa = null; // tenta de novo na próxima
+      throw erro;
+    });
+  return cotacaoPromessa;
+}
+
+// ---------- Preço real da Steam Brasil ----------
+// A CheapShark dá o preço em dólar da Steam dos EUA. No Brasil a Steam tem preço regional (em reais),
+// quase sempre menor que "dólar × cotação" — era por isso que o site mostrava preços acima do real.
+// Para as ofertas da Steam, busca o preço em reais (via /api/precos-steam) e o guarda "em dólar
+// equivalente" (reais ÷ cotação), assim o resto do site continua igual e mostra o valor exato em R$.
+const precosBR = new Map(); // appID → { em, preco }
+const VALIDADE_PRECO = 10 * 60 * 1000;
+
+async function buscarPrecosSteamBR(apps) {
+  const faltam = apps.filter((a) => !precosBR.has(a) || Date.now() - precosBR.get(a).em > VALIDADE_PRECO);
+  for (let i = 0; i < faltam.length; i += 100) {
+    const lote = faltam.slice(i, i + 100);
+    try {
+      const dados = await getJson(`/api/precos-steam?apps=${lote.join(',')}`);
+      lote.forEach((a) => precosBR.set(a, { em: Date.now(), preco: dados[a] || null }));
+    } catch {
+      return; // sem a função do Vercel (ex.: npm run dev): fica a conversão pelo dólar
+    }
+  }
+}
+
+const ehSteam = (o) => String(o.lojaId) === LOJA_STEAM && Number(o.steamAppID) > 0;
+
+export async function ajustarPrecosBR(lista) {
+  const apps = [...new Set(lista.filter(ehSteam).map((o) => String(o.steamAppID)))];
+  if (!apps.length) return lista;
+  let cotacao;
+  try {
+    [cotacao] = await Promise.all([buscarCotacaoDolar().then((c) => c.valor), buscarPrecosSteamBR(apps)]);
+  } catch {
+    return lista;
+  }
+  if (!(cotacao > 0)) return lista;
+  for (const o of lista) {
+    if (!ehSteam(o)) continue;
+    const br = precosBR.get(String(o.steamAppID))?.preco;
+    if (!br) continue;
+    o.precoPromocional = br.final / cotacao;
+    o.precoNormal = (br.inicial || br.final) / cotacao;
+    o.desconto = br.desconto;
+    o.precoBR = true; // preço oficial em reais (não é conversão)
+  }
+  return lista;
 }

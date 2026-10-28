@@ -3,6 +3,7 @@ import { buscarOfertasDoJogo } from './api.js';
 import { contexto, carregarContexto, precoEmReal } from './contexto.js';
 import { varsDaLoja, imgJogo } from './lojas.js';
 import { botaoEstrela } from './estrela.js';
+import { marcaConversao } from './cartoes.js';
 import { esc, idPromocao } from './util.js';
 
 let dialogo;
@@ -38,7 +39,7 @@ function linhaOferta(o, { destacadas, menor }) {
       <span class="escolha-preco">
         ${o.desconto >= 1 ? `<span class="desconto">-${o.desconto}%</span>` : ''}
         ${o.desconto >= 1 ? `<span class="preco-antigo">${precoEmReal(o.precoNormal)}</span>` : ''}
-        <strong>${o.precoPromocional === 0 ? 'Grátis' : precoEmReal(o.precoPromocional)}</strong>
+        <strong>${o.precoPromocional === 0 ? 'Grátis' : `${marcaConversao(o)}${precoEmReal(o.precoPromocional)}`}</strong>
       </span>
       <span class="escolha-ir" aria-hidden="true">Ir →</span>
     </a>`;
