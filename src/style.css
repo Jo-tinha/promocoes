@@ -725,10 +725,52 @@ code { background: var(--fundo-2); border: 1px solid var(--linha); padding: 1px 
    VITRINE — atalhos de lojas e faixa Grátis
    ===================================================================== */
 .atalhos { display: flex; align-items: center; gap: 12px; margin: 18px 0 4px; }
-.atalhos-lojas { display: flex; gap: 8px; overflow-x: auto; flex: 1; min-width: 0; padding: 2px 2px 6px; scrollbar-width: none; }
+.atalhos-lojas {
+  display: flex; gap: 10px; overflow-x: auto; flex: 1; min-width: 0; padding: 4px 2px 8px; scrollbar-width: none;
+  scroll-snap-type: x proximity; --fade-e: 0px; --fade-d: 0px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 var(--fade-e), #000 calc(100% - var(--fade-d)), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 var(--fade-e), #000 calc(100% - var(--fade-d)), transparent 100%);
+}
+.atalhos-lojas.tem-esquerda { --fade-e: 40px; }
+.atalhos-lojas.tem-direita { --fade-d: 56px; }
 .atalhos-lojas::-webkit-scrollbar { display: none; }
-.atalhos-lojas .chip { text-decoration: none; color: var(--texto-suave); flex: 0 0 auto; }
-.atalhos-lojas .chip:hover { color: var(--texto); border-color: var(--cor-loja, var(--texto-suave)); background: color-mix(in srgb, var(--cor-loja, #fff) 12%, var(--cartao)); }
+
+/* Bloco de cada loja: cor da loja no fundo, ícone num "app icon" claro e o maior desconto */
+.loja-atalho {
+  --cl: var(--cor-loja, #8a93a6);
+  position: relative; flex: 0 0 auto; display: flex; align-items: center; gap: 10px; scroll-snap-align: start;
+  padding: 7px 14px 7px 7px; border-radius: 14px; text-decoration: none; color: var(--texto); overflow: hidden;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cl) 20%, var(--cartao)) 0%, var(--cartao) 75%);
+  border: 1px solid color-mix(in srgb, var(--cl) 28%, var(--linha));
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.loja-atalho::after {
+  content: ''; position: absolute; left: 12px; right: 12px; bottom: 0; height: 2px; border-radius: 2px;
+  background: var(--cl); opacity: 0; transform: scaleX(0.4); transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.loja-atalho:hover, .loja-atalho:focus-visible {
+  transform: translateY(-2px); border-color: color-mix(in srgb, var(--cl) 70%, transparent);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--cl) 22%, transparent);
+}
+.loja-atalho:hover::after, .loja-atalho:focus-visible::after { opacity: 1; transform: scaleX(1); }
+.loja-atalho:focus:not(:focus-visible) { outline: none; }
+.loja-atalho-icone {
+  width: 34px; height: 34px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 10px;
+  background: #f4f6fb; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.35); font-size: 1.05rem;
+}
+.loja-atalho-icone img { width: 20px; height: 20px; object-fit: contain; }
+.loja-atalho-texto { display: grid; line-height: 1.15; }
+.loja-atalho-texto strong { font-size: 0.88rem; font-weight: 700; white-space: nowrap; }
+.loja-atalho-texto small { font-size: 0.72rem; color: var(--texto-suave); white-space: nowrap; }
+.loja-atalho-texto small:first-letter { text-transform: uppercase; }
+.loja-atalho.especial { --cl: #ff5c35; }
+.loja-atalho.especial .loja-atalho-icone { background: color-mix(in srgb, var(--cl) 22%, var(--fundo-2)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cl) 40%, transparent); }
+.loja-atalho.gratis { --cl: #ffd23f; }
+@media (max-width: 640px) {
+  .loja-atalho { padding: 6px 12px 6px 6px; gap: 8px; }
+  .loja-atalho-icone { width: 30px; height: 30px; border-radius: 9px; }
+  .loja-atalho-icone img { width: 18px; height: 18px; }
+}
 .atalhos .cotacao { margin: 0; flex: 0 0 auto; }
 .chamada { margin-top: 14px; }
 .faixa-gratis .faixa-cabeca a { color: var(--texto); }

@@ -375,6 +375,7 @@ async function semDestaques() {
 }
 
 function blocoLoja(lojaId, lista) {
+  atualizarAtalhoDaLoja(lojaId, lista);
   const loja = contexto.lojas.get(lojaId);
   const maior = Math.max(...lista.map((p) => p.desconto));
   return `
@@ -459,14 +460,42 @@ async function carregarRecomendacoes() {
 }
 
 // ---------- Atalhos das lojas ----------
+// Barra das lojas: um bloco por loja, com a cor dela; o "até -X%" aparece quando a faixa da loja carrega
+const NOME_CURTO = { 'Epic Games Store': 'Epic Games', GreenManGaming: 'Green Man Gaming', 'Humble Store': 'Humble' };
 function renderizarAtalhos() {
-  $('#atalhos-lojas').innerHTML = ORDEM_LOJAS.filter((id) => contexto.lojas.has(id))
-    .slice(0, 10)
-    .map((id) => {
-      const l = contexto.lojas.get(id);
-      return `<a class="chip" href="/loja.html?id=${encodeURIComponent(id)}" style="${varsDaLoja(id)}"><img src="${esc(l.icone)}" alt="" />${esc(l.nome)}</a>`;
-    })
-    .join('') + '<a class="chip" href="#faixa-gratis">🎁 Grátis</a><a class="chip" href="/jogos.html">⭐ Games</a>';
+  const nav = $('#atalhos-lojas');
+  nav.innerHTML =
+    ORDEM_LOJAS.filter((id) => contexto.lojas.has(id))
+      .slice(0, 12)
+      .map((id) => {
+        const l = contexto.lojas.get(id);
+        return `
+        <a class="loja-atalho" data-loja-atalho="${esc(id)}" href="/loja.html?id=${encodeURIComponent(id)}" style="${varsDaLoja(id)}">
+          <span class="loja-atalho-icone"><img src="${esc(l.icone)}" alt="" loading="lazy" /></span>
+          <span class="loja-atalho-texto"><strong>${esc(NOME_CURTO[l.nome] || l.nome)}</strong><small>ver ofertas</small></span>
+        </a>`;
+      })
+      .join('') +
+    `<a class="loja-atalho especial gratis" href="#faixa-gratis">
+       <span class="loja-atalho-icone">🎁</span><span class="loja-atalho-texto"><strong>Grátis</strong><small>para resgatar</small></span>
+     </a>
+     <a class="loja-atalho especial" href="/jogos.html">
+       <span class="loja-atalho-icone">⭐</span><span class="loja-atalho-texto"><strong>Games</strong><small>todos os jogos</small></span>
+     </a>`;
+  // esmaecido nas bordas só do lado em que ainda dá para rolar
+  const bordas = () => {
+    nav.classList.toggle('tem-esquerda', nav.scrollLeft > 4);
+    nav.classList.toggle('tem-direita', nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 4);
+  };
+  nav.addEventListener('scroll', bordas, { passive: true });
+  addEventListener('resize', bordas);
+  bordas();
+}
+
+function atualizarAtalhoDaLoja(lojaId, lista) {
+  const el = document.querySelector(`[data-loja-atalho="${CSS.escape(String(lojaId))}"] small`);
+  const maior = Math.max(0, ...lista.map((p) => p.desconto || 0));
+  if (el && maior) el.textContent = `até -${maior}%`;
 }
 
 // ---------- Interações ----------
