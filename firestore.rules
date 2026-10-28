@@ -11,6 +11,8 @@ service cloud.firestore {
       return logado() && (
         (request.auth.token.email_verified == true
           && request.auth.token.email in ['bedimjoaovictor@gmail.com', 'bobapromo@gmail.com'])
+        // conta de TESTE (e-mail fictício, não dá para verificar); a mesma lista de src/admins.js
+        || request.auth.token.email in ['teste.admin@bubapromo.test']
         || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
